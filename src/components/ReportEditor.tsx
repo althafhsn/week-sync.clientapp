@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { emptyReport, weeks } from "@/lib/demo-data";
+import { emptyReport, weekLabel, weeks } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 import {
   ACHIEVEMENT_TYPE_LABEL,
@@ -78,6 +78,12 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
       : emptyReport(currentUser?.id ?? "", assignedProjects[0]?.id ?? "")
   );
 
+  const [weekMode, setWeekMode] = useState<"preset" | "custom">(() =>
+    weeks.some((w) => w.start === report.weekStart && w.end === report.weekEnd)
+      ? "preset"
+      : "custom"
+  );
+
   const wasNeedsCorrection = existing?.status === "needs_correction";
 
   function patch(partial: Partial<WeeklyReport>) {
@@ -107,6 +113,14 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
   }
 
   function validate() {
+    if (!report.weekStart || !report.weekEnd) {
+      toast.error("Select both a week start and end date.");
+      return false;
+    }
+    if (report.weekEnd < report.weekStart) {
+      toast.error("The week end date can't be before the start date.");
+      return false;
+    }
     const projectValid = assignedProjects.some((p) => p.id === report.projectId);
     if (!projectValid) {
       toast.error("Select a valid project before saving.");
@@ -143,30 +157,82 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
           <CardTitle>Report details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>Reporting week</Label>
-            <Select
-              items={weeks.map((w) => ({ value: w.start, label: w.label }))}
-              value={report.weekStart}
-              onValueChange={(value) => {
-                const week = weeks.find((w) => w.start === value);
-                if (week) patch({ weekStart: week.start, weekEnd: week.end });
-              }}
-            >
-              <SelectTrigger className="h-10 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {weeks.map((w) => (
-                  <SelectItem key={w.start} value={w.start}>
-                    {w.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Reporting period</Label>
+            <div className="bg-muted flex h-10 w-full items-center gap-1 rounded-lg p-1 sm:max-w-xs">
+              <Button
+                type="button"
+                size="sm"
+                variant={weekMode === "preset" ? "default" : "ghost"}
+                className="h-8 flex-1"
+                onClick={() => setWeekMode("preset")}
+              >
+                Preset week
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={weekMode === "custom" ? "default" : "ghost"}
+                className="h-8 flex-1"
+                onClick={() => setWeekMode("custom")}
+              >
+                Custom date range
+              </Button>
+            </div>
           </div>
 
-          <div className="space-y-1.5">
+          {weekMode === "preset" ? (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Week</Label>
+              <Select
+                items={weeks.map((w) => ({
+                  value: w.start,
+                  label: weekLabel(w.start, w.end),
+                }))}
+                value={report.weekStart}
+                onValueChange={(value) => {
+                  const week = weeks.find((w) => w.start === value);
+                  if (week) patch({ weekStart: week.start, weekEnd: week.end });
+                }}
+              >
+                <SelectTrigger className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {weeks.map((w) => (
+                    <SelectItem key={w.start} value={w.start}>
+                      {weekLabel(w.start, w.end)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <Label>Week start</Label>
+                <Input
+                  type="date"
+                  value={report.weekStart}
+                  onChange={(e) => patch({ weekStart: e.target.value })}
+                  className="h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Week end</Label>
+                <Input
+                  type="date"
+                  value={report.weekEnd}
+                  min={report.weekStart}
+                  onChange={(e) => patch({ weekEnd: e.target.value })}
+                  className="h-10"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="space-y-1.5 sm:col-span-2">
             <Label>Project</Label>
             {assignedProjects.length === 0 ? (
               <p className="text-destructive text-sm">

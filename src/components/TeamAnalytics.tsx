@@ -14,7 +14,7 @@ import {
 } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { weeks } from "@/lib/demo-data";
+import { weekLabel } from "@/lib/demo-data";
 import { STATUS_LABEL, type ReportStatus, type WeeklyReport } from "@/lib/types";
 
 const STATUS_COLORS: Record<ReportStatus, string> = {
@@ -34,14 +34,20 @@ const tooltipStyle = {
 };
 
 export function TeamAnalytics({ reports }: { reports: WeeklyReport[] }) {
-  const activeWeeks = weeks
-    .filter((w) => reports.some((r) => r.weekStart === w.start))
+  const weekMap = new Map<string, string>();
+  reports.forEach((r) => weekMap.set(r.weekStart, r.weekEnd));
+  const activeWeeks = Array.from(weekMap.entries())
+    .map(([start, end]) => ({ start, end }))
+    .sort((a, b) => a.start.localeCompare(b.start))
     .slice(-5);
 
-  const activityData = activeWeeks.map((w) => ({
-    week: w.label.split(" – ")[0] ?? w.label,
-    count: reports.filter((r) => r.weekStart === w.start).length,
-  }));
+  const activityData = activeWeeks.map((w) => {
+    const label = weekLabel(w.start, w.end);
+    return {
+      week: label.split(" – ")[0] ?? label,
+      count: reports.filter((r) => r.weekStart === w.start).length,
+    };
+  });
 
   const statusOrder: ReportStatus[] = [
     "approved",

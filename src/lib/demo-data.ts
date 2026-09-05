@@ -131,8 +131,36 @@ export const weeks = [
   { start: "2026-08-31", end: "2026-09-04", label: "Aug 31 – Sep 4, 2026" },
 ];
 
-export function weekLabel(start: string) {
-  return weeks.find((w) => w.start === start)?.label ?? start;
+function parseLocalDate(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year!, (month ?? 1) - 1, day ?? 1);
+}
+
+const SHORT_DATE = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+});
+const SHORT_DATE_WITH_YEAR = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+/**
+ * Formats an arbitrary custom date range (not just the seeded weeks) as a
+ * human label, e.g. "Aug 3 – Aug 7, 2026" or "Aug 30 – Sep 4, 2026".
+ */
+export function weekLabel(start: string, end?: string) {
+  const startDate = parseLocalDate(start);
+  if (!end || end === start) {
+    return SHORT_DATE_WITH_YEAR.format(startDate);
+  }
+  const endDate = parseLocalDate(end);
+  const sameYear = startDate.getFullYear() === endDate.getFullYear();
+  const startLabel = sameYear
+    ? SHORT_DATE.format(startDate)
+    : SHORT_DATE_WITH_YEAR.format(startDate);
+  return `${startLabel} – ${SHORT_DATE_WITH_YEAR.format(endDate)}`;
 }
 
 const taskPool: Array<Omit<ReportTask, "id">> = [

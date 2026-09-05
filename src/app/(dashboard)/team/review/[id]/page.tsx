@@ -34,7 +34,7 @@ export default function ReviewReportPage() {
   usePageHeader({
     title: "Review weekly report",
     description: report
-      ? `${userName(report.memberId)} · ${weekLabel(report.weekStart)} · ${projectName(report.projectId)}`
+      ? `${userName(report.memberId)} · ${weekLabel(report.weekStart, report.weekEnd)} · ${projectName(report.projectId)}`
       : "Report not found",
   });
 

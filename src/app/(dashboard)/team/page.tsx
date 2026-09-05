@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { TeamAnalytics } from "@/components/TeamAnalytics";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { weeks } from "@/lib/demo-data";
+import { weekLabel } from "@/lib/demo-data";
 import { useLookups, useStore } from "@/lib/store";
 
 export default function TeamDashboardPage() {
@@ -26,8 +26,13 @@ export default function TeamDashboardPage() {
   const approved = reports.filter((r) => r.status === "approved");
   const needsCorrection = reports.filter((r) => r.status === "needs_correction");
 
-  const thisWeek = weeks[weeks.length - 1]!;
-  const thisWeekReports = reports.filter((r) => r.weekStart === thisWeek.start);
+  const distinctWeekStarts = Array.from(
+    new Set(reports.map((r) => r.weekStart))
+  ).sort();
+  const currentWeekStart = distinctWeekStarts.at(-1);
+  const thisWeekReports = reports.filter(
+    (r) => r.weekStart === currentWeekStart
+  );
   const activeMembers = new Set(thisWeekReports.map((r) => r.memberId)).size;
 
   const readyForReview = [...awaitingReview]
@@ -98,7 +103,7 @@ export default function TeamDashboardPage() {
                       {userName(report.memberId)}
                     </p>
                     <p className="text-muted-foreground truncate text-xs">
-                      {weeks.find((w) => w.start === report.weekStart)?.label} ·{" "}
+                      {weekLabel(report.weekStart, report.weekEnd)} ·{" "}
                       {projectName(report.projectId)}
                     </p>
                   </div>

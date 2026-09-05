@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { usePageHeader } from "@/components/AppShell";
 import { FilterBar, type FilterConfig } from "@/components/FilterBar";
 import { ReportTable } from "@/components/ReportTable";
-import { weeks } from "@/lib/demo-data";
+import { weekLabel } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 import { STATUS_LABEL, type ReportStatus } from "@/lib/types";
 
@@ -25,9 +25,10 @@ export default function TeamReportsPage() {
   const [week, setWeek] = useState("all");
 
   const usedWeeks = useMemo(() => {
-    const starts = new Set(reports.map((r) => r.weekStart));
-    return weeks
-      .filter((w) => starts.has(w.start))
+    const map = new Map<string, string>();
+    reports.forEach((r) => map.set(r.weekStart, r.weekEnd));
+    return Array.from(map.entries())
+      .map(([start, end]) => ({ start, end }))
       .sort((a, b) => b.start.localeCompare(a.start));
   }, [reports]);
 
@@ -81,7 +82,10 @@ export default function TeamReportsPage() {
       label: "Weeks",
       value: week,
       onChange: setWeek,
-      options: usedWeeks.map((w) => ({ value: w.start, label: w.label })),
+      options: usedWeeks.map((w) => ({
+        value: w.start,
+        label: weekLabel(w.start, w.end),
+      })),
     },
   ];
 

@@ -9,7 +9,7 @@ import { FilterBar, type FilterConfig } from "@/components/FilterBar";
 import { PageActions } from "@/components/PageActions";
 import { ReportTable } from "@/components/ReportTable";
 import { Button } from "@/components/ui/button";
-import { weeks } from "@/lib/demo-data";
+import { weekLabel } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 import { STATUS_LABEL, type ReportStatus } from "@/lib/types";
 
@@ -41,9 +41,10 @@ export default function ReportHistoryPage() {
   );
 
   const myWeeks = useMemo(() => {
-    const starts = new Set(myReports.map((r) => r.weekStart));
-    return weeks
-      .filter((w) => starts.has(w.start))
+    const map = new Map<string, string>();
+    myReports.forEach((r) => map.set(r.weekStart, r.weekEnd));
+    return Array.from(map.entries())
+      .map(([start, end]) => ({ start, end }))
       .sort((a, b) => b.start.localeCompare(a.start));
   }, [myReports]);
 
@@ -87,7 +88,10 @@ export default function ReportHistoryPage() {
       label: "Weeks",
       value: week,
       onChange: setWeek,
-      options: myWeeks.map((w) => ({ value: w.start, label: w.label })),
+      options: myWeeks.map((w) => ({
+        value: w.start,
+        label: weekLabel(w.start, w.end),
+      })),
     },
   ];
 

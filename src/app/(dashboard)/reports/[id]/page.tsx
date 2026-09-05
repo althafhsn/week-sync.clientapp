@@ -28,7 +28,7 @@ export default function ReportDetailPage() {
   );
 
   usePageHeader({
-    title: report ? weekLabel(report.weekStart) : "Report",
+    title: report ? weekLabel(report.weekStart, report.weekEnd) : "Report",
     description:
       report && currentUser
         ? `${projectName(report.projectId)} · ${currentUser.name}`

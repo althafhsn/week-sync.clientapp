@@ -113,7 +113,7 @@ export default function MemberDashboardPage() {
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium">
-                      {weekLabel(report.weekStart)}
+                      {weekLabel(report.weekStart, report.weekEnd)}
                     </p>
                     {lastComment ? (
                       <p className="text-muted-foreground line-clamp-2 text-sm">
