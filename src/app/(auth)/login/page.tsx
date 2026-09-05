@@ -12,7 +12,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuthStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { DEMO_PASSWORD, seedUsers } from "@/lib/demo-data";
 import type { User } from "@/lib/types";
 
@@ -24,23 +24,28 @@ const demoAccounts = DEMO_SHORTCUT_EMAILS.map(
 
 export default function LoginPage() {
   const router = useRouter();
-  const signIn = useAuthStore((state) => state.signIn);
+  const { users, setMemberId, signIn } = useStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   function handleSignIn(user: User) {
-    signIn(user);
-    router.push(destinationFor(user.role));
+    if (user.role === "member") {
+      setMemberId(user.id);
+    }
+    signIn(user.role);
+    router.push(
+      user.mustChangePassword ? "/change-password" : destinationFor(user.role)
+    );
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const match = seedUsers.find(
+    const match = users.find(
       (user) => user.email === email.trim().toLowerCase()
     );
 
-    if (!match || password !== DEMO_PASSWORD) {
-      toast.error("Those credentials don't match a demo account.");
+    if (!match || match.password !== password) {
+      toast.error("Those credentials don't match an account.");
       return;
     }
 

@@ -20,15 +20,19 @@ export const seedUsers: User[] = [
     title: "Engineering Manager",
     team: "Platform",
     joinedAt: "2023-02-13",
+    password: DEMO_PASSWORD,
+    mustChangePassword: false,
   },
   {
     id: "u-nasra",
-    name: "Nasra Ahmed",
+    name: "Nasra Nasar",
     email: "nasra@northwind.io",
     role: "member",
     title: "Senior Frontend Engineer",
     team: "Platform",
     joinedAt: "2023-06-05",
+    password: DEMO_PASSWORD,
+    mustChangePassword: false,
   },
   {
     id: "u-arjun",
@@ -38,6 +42,8 @@ export const seedUsers: User[] = [
     title: "Backend Engineer",
     team: "Platform",
     joinedAt: "2024-01-15",
+    password: DEMO_PASSWORD,
+    mustChangePassword: false,
   },
   {
     id: "u-leah",
@@ -47,6 +53,8 @@ export const seedUsers: User[] = [
     title: "QA Engineer",
     team: "Quality",
     joinedAt: "2024-04-02",
+    password: DEMO_PASSWORD,
+    mustChangePassword: true,
   },
   {
     id: "u-tomas",
@@ -56,6 +64,8 @@ export const seedUsers: User[] = [
     title: "Product Designer",
     team: "Design",
     joinedAt: "2022-11-21",
+    password: DEMO_PASSWORD,
+    mustChangePassword: false,
   },
   {
     id: "u-priya",
@@ -65,6 +75,8 @@ export const seedUsers: User[] = [
     title: "Data Engineer",
     team: "Data",
     joinedAt: "2025-03-10",
+    password: DEMO_PASSWORD,
+    mustChangePassword: false,
   },
 ];
 
@@ -74,7 +86,7 @@ export const seedProjects: Project[] = [
     name: "Atlas Billing",
     category: "Product",
     description: "Subscription billing and invoicing revamp.",
-    active: true,
+    status: "active",
     memberIds: ["u-nasra", "u-arjun", "u-leah"],
   },
   {
@@ -82,7 +94,7 @@ export const seedProjects: Project[] = [
     name: "Orbit Mobile",
     category: "Product",
     description: "Cross-platform mobile client for field teams.",
-    active: true,
+    status: "active",
     memberIds: ["u-nasra", "u-leah", "u-tomas"],
   },
   {
@@ -90,7 +102,7 @@ export const seedProjects: Project[] = [
     name: "Ledger Migration",
     category: "Infrastructure",
     description: "Move reporting warehouse to the new pipeline.",
-    active: true,
+    status: "active",
     memberIds: ["u-arjun", "u-priya"],
   },
   {
@@ -98,8 +110,16 @@ export const seedProjects: Project[] = [
     name: "Support Tooling",
     category: "Internal",
     description: "Internal agent console and macros.",
-    active: false,
+    status: "archived",
     memberIds: ["u-tomas"],
+  },
+  {
+    id: "p-growth",
+    name: "Growth Experiments",
+    category: "Marketing",
+    description: "Pipeline of experiments awaiting scoping and staffing.",
+    status: "proposed",
+    memberIds: [],
   },
 ];
 

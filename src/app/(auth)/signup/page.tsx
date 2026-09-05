@@ -17,12 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuthStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import type { Role, User } from "@/lib/types";
 
 export default function SignupPage() {
   const router = useRouter();
-  const signIn = useAuthStore((state) => state.signIn);
+  const { setMemberId, signIn, upsertUser } = useStore();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -51,9 +51,15 @@ export default function SignupPage() {
       title: role === "manager" ? "Manager" : "Team Member",
       team: "Unassigned",
       joinedAt: new Date().toISOString(),
+      password,
+      mustChangePassword: false,
     };
 
-    signIn(newUser);
+    if (role === "member") {
+      upsertUser(newUser);
+      setMemberId(newUser.id);
+    }
+    signIn(role);
     router.push(destinationFor(role));
   }
 

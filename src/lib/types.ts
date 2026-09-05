@@ -15,14 +15,19 @@ export interface User {
   title: string;
   team: string;
   joinedAt: string;
+  password: string;
+  /** True until the user sets their own password after an admin-issued temporary one. */
+  mustChangePassword: boolean;
 }
+
+export type ProjectStatus = "proposed" | "active" | "archived";
 
 export interface Project {
   id: string;
   name: string;
   category: string;
   description: string;
-  active: boolean;
+  status: ProjectStatus;
   /** Team members who can create reports for this project. */
   memberIds: string[];
 }
@@ -106,6 +111,12 @@ export const PRIORITY_LABEL: Record<TaskPriority, string> = {
   medium: "Medium",
   high: "High",
   critical: "Critical",
+};
+
+export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
+  proposed: "Proposed",
+  active: "Active",
+  archived: "Archived",
 };
 
 export function totalHours(h: HoursByType) {

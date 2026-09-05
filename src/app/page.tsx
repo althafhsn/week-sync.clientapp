@@ -4,18 +4,22 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { destinationFor } from "@/components/auth/AuthGate";
-import { useAuthStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
 
 export default function Home() {
   const router = useRouter();
-  const hydrated = useAuthStore((state) => state.hydrated);
-  const signedIn = useAuthStore((state) => state.signedIn);
-  const role = useAuthStore((state) => state.currentUser?.role);
+  const { hydrated, signedIn, role, currentUser } = useStore();
 
   useEffect(() => {
     if (!hydrated) return;
-    router.replace(signedIn && role ? destinationFor(role) : "/login");
-  }, [hydrated, signedIn, role, router]);
+    if (!signedIn) {
+      router.replace("/login");
+      return;
+    }
+    router.replace(
+      currentUser?.mustChangePassword ? "/change-password" : destinationFor(role)
+    );
+  }, [hydrated, signedIn, role, currentUser, router]);
 
   return null;
 }
