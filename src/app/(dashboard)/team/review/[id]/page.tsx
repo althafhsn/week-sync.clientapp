@@ -68,7 +68,12 @@ export default function ReviewReportPage() {
   return (
     <div className="space-y-6">
       <PageActions>
-        <Button size="sm" variant="outline" render={<Link href="/team/reports" />}>
+        <Button
+          size="sm"
+          variant="outline"
+          render={<Link href="/team/reports" />}
+          className="flex items-center gap-2 py-4"
+        >
           All reports
         </Button>
       </PageActions>

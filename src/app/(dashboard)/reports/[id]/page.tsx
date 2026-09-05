@@ -49,7 +49,12 @@ export default function ReportDetailPage() {
   return (
     <div className="space-y-6">
       <PageActions>
-        <Button size="sm" variant="outline" render={<Link href="/reports" />}>
+        <Button
+          size="sm"
+          variant="outline"
+          render={<Link href="/reports" />}
+          className="flex items-center gap-2 py-4"
+        >
           History
         </Button>
         {report.status === "draft" || report.status === "needs_correction" ? (
@@ -57,6 +62,7 @@ export default function ReportDetailPage() {
             size="sm"
             variant="outline"
             render={<Link href={`/reports/${report.id}/edit`} />}
+            className="flex items-center gap-2 py-4"
           >
             Edit
           </Button>
@@ -68,6 +74,7 @@ export default function ReportDetailPage() {
               submitReport(report.id);
               toast.success("Report submitted for review.");
             }}
+            className="flex items-center gap-2 py-4"
           >
             Submit
           </Button>

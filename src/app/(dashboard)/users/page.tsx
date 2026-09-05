@@ -47,7 +47,11 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <PageActions>
-        <Button size="sm" onClick={() => setDraft(blankUser())}>
+        <Button
+          size="sm"
+          onClick={() => setDraft(blankUser())}
+          className="flex items-center gap-2 py-4"
+        >
           <Plus className="size-4" />
           Add user
         </Button>

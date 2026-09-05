@@ -11,10 +11,11 @@ import {
 import { cn } from "@/lib/utils";
 
 const STATUS_CLASSES: Record<ReportStatus, string> = {
-  approved: "bg-success/15 text-success",
-  submitted: "bg-info/15 text-info",
-  needs_correction: "bg-warning/25 text-warning-foreground",
-  draft: "bg-muted text-muted-foreground",
+  approved: "bg-success/15 text-success dark:bg-success/25",
+  submitted: "bg-info/15 text-info dark:bg-info/25",
+  needs_correction:
+    "bg-warning/25 text-warning-foreground dark:bg-warning/25 dark:text-warning",
+  draft: "bg-muted text-muted-foreground dark:bg-white/10 dark:text-foreground/80",
 };
 
 export function StatusBadge({
@@ -38,10 +39,11 @@ export function StatusBadge({
 }
 
 const TASK_STATUS_CLASSES: Record<TaskStatus, string> = {
-  completed: "bg-success/15 text-success",
-  in_progress: "bg-info/15 text-info",
-  blocked: "bg-destructive/10 text-destructive",
-  carried_over: "bg-muted text-muted-foreground",
+  completed: "bg-success/15 text-success dark:bg-success/25",
+  in_progress: "bg-info/15 text-info dark:bg-info/25",
+  blocked: "bg-destructive/10 text-destructive dark:bg-destructive/25",
+  carried_over:
+    "bg-muted text-muted-foreground dark:bg-white/10 dark:text-foreground/80",
 };
 
 export function TaskStatusBadge({
@@ -65,16 +67,17 @@ export function TaskStatusBadge({
 }
 
 const PRIORITY_CLASSES: Record<TaskPriority, string> = {
-  low: "bg-muted text-muted-foreground",
+  low: "bg-muted text-muted-foreground dark:bg-white/10 dark:text-foreground/80",
   medium: "bg-secondary text-secondary-foreground",
-  high: "bg-warning/25 text-warning-foreground",
-  critical: "bg-destructive/15 text-destructive",
+  high: "bg-warning/25 text-warning-foreground dark:bg-warning/25 dark:text-warning",
+  critical: "bg-destructive/15 text-destructive dark:bg-destructive/25",
 };
 
 const PROJECT_STATUS_CLASSES: Record<ProjectStatus, string> = {
-  proposed: "bg-info/15 text-info",
-  active: "bg-success/15 text-success",
-  archived: "bg-muted text-muted-foreground",
+  proposed: "bg-info/15 text-info dark:bg-info/25",
+  active: "bg-success/15 text-success dark:bg-success/25",
+  archived:
+    "bg-muted text-muted-foreground dark:bg-white/10 dark:text-foreground/80",
 };
 
 export function ProjectStatusBadge({

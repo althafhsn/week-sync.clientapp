@@ -94,7 +94,11 @@ export default function ReportHistoryPage() {
   return (
     <div className="space-y-4">
       <PageActions>
-        <Button size="sm" render={<Link href="/reports/new" />}>
+        <Button
+          size="sm"
+          render={<Link href="/reports/new" />}
+          className="flex items-center gap-2 py-4"
+        >
           <Plus className="size-4" />
           New report
         </Button>
