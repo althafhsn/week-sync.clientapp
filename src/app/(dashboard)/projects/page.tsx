@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { usePageHeader } from "@/components/AppShell";
+import { PageActions } from "@/components/PageActions";
 import { ProjectEditorCard } from "@/components/admin/ProjectEditorCard";
 import { ProjectStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -29,12 +30,6 @@ export default function ProjectsPage() {
   usePageHeader({
     title: "Projects",
     description: "Manage the projects and categories teams report against.",
-    actions: (
-      <Button size="sm" onClick={() => setDraft(blankProject())}>
-        <Plus className="size-4" />
-        New project
-      </Button>
-    ),
   });
 
   function handleSave() {
@@ -45,6 +40,13 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
+      <PageActions>
+        <Button size="sm" onClick={() => setDraft(blankProject())} className="flex items-center gap-2 py-4">
+          <Plus className="size-4" />
+          New project
+        </Button>
+      </PageActions>
+
       {draft ? (
         <ProjectEditorCard
           project={draft}

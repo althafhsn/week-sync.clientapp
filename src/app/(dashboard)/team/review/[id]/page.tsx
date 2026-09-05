@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { usePageHeader } from "@/components/AppShell";
+import { PageActions } from "@/components/PageActions";
 import { EffortSummaryCard } from "@/components/report-detail/EffortSummaryCard";
 import {
   AchievementsBlockersGrid,
@@ -35,11 +36,6 @@ export default function ReviewReportPage() {
     description: report
       ? `${userName(report.memberId)} · ${weekLabel(report.weekStart)} · ${projectName(report.projectId)}`
       : "Report not found",
-    actions: (
-      <Button size="sm" variant="outline" render={<Link href="/team/reports" />}>
-        All reports
-      </Button>
-    ),
   });
 
   if (!report) {
@@ -70,54 +66,62 @@ export default function ReviewReportPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-      <div className="space-y-6 xl:col-span-2">
-        <ReportWorkCard report={report} title="Delivery" />
-        <AchievementsBlockersGrid report={report} />
-        <NextWeekCard report={report} />
-      </div>
+    <div className="space-y-6">
+      <PageActions>
+        <Button size="sm" variant="outline" render={<Link href="/team/reports" />}>
+          All reports
+        </Button>
+      </PageActions>
 
-      <div className="space-y-6">
-        <EffortSummaryCard hours={report.hours} title="Effort recorded" />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
+          <ReportWorkCard report={report} title="Delivery" />
+          <AchievementsBlockersGrid report={report} />
+          <NextWeekCard report={report} />
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Review decision</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!isSubmitted ? (
-              <p className="text-muted-foreground text-sm">
-                This report has already been reviewed and is read-only.
-              </p>
-            ) : null}
-            <Textarea
-              rows={4}
-              placeholder="Leave a comment for the team member…"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              disabled={!isSubmitted}
-            />
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                className="bg-success text-success-foreground hover:bg-success/85 flex-1"
+        <div className="space-y-6">
+          <EffortSummaryCard hours={report.hours} title="Effort recorded" />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Review decision</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!isSubmitted ? (
+                <p className="text-muted-foreground text-sm">
+                  This report has already been reviewed and is read-only.
+                </p>
+              ) : null}
+              <Textarea
+                rows={4}
+                placeholder="Leave a comment for the team member…"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
                 disabled={!isSubmitted}
-                onClick={() => handleDecision("approved")}
-              >
-                Approve report
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                disabled={!isSubmitted}
-                onClick={() => handleDecision("changes_requested")}
-              >
-                Request corrections
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              />
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  className="bg-success text-success-foreground hover:bg-success/85 flex-1"
+                  disabled={!isSubmitted}
+                  onClick={() => handleDecision("approved")}
+                >
+                  Approve report
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={!isSubmitted}
+                  onClick={() => handleDecision("changes_requested")}
+                >
+                  Request corrections
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

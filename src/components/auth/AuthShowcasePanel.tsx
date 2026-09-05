@@ -1,9 +1,11 @@
 import { CalendarCheck2, FolderKanban, Users } from "lucide-react";
 
+import { AnimatedNumber } from "@/components/AnimatedNumber";
+
 const STATS = [
-  { label: "Active members", value: "48", icon: Users },
-  { label: "Live projects", value: "12", icon: FolderKanban },
-  { label: "Reports this week", value: "126", icon: CalendarCheck2 },
+  { label: "Active members", value: 48, icon: Users },
+  { label: "Live projects", value: 12, icon: FolderKanban },
+  { label: "Reports this week", value: 126, icon: CalendarCheck2 },
 ];
 
 export function AuthShowcasePanel() {
@@ -32,7 +34,7 @@ export function AuthShowcasePanel() {
           >
             <Icon className="text-primary size-5" />
             <dd className="mt-3 text-2xl font-semibold tracking-tight">
-              {value}
+              <AnimatedNumber value={value} />
             </dd>
             <dt className="text-muted-foreground text-sm">{label}</dt>
           </div>

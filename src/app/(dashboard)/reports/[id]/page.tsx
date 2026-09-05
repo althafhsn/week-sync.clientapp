@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { usePageHeader } from "@/components/AppShell";
+import { PageActions } from "@/components/PageActions";
 import { EffortSummaryCard } from "@/components/report-detail/EffortSummaryCard";
 import { FeedbackCard } from "@/components/report-detail/FeedbackCard";
 import {
@@ -32,8 +33,22 @@ export default function ReportDetailPage() {
       report && currentUser
         ? `${projectName(report.projectId)} · ${currentUser.name}`
         : "Report not found",
-    actions: report ? (
-      <>
+  });
+
+  if (!report) {
+    return (
+      <div className="text-muted-foreground flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center text-sm">
+        <p>Report not found.</p>
+        <Button size="sm" variant="outline" render={<Link href="/reports" />}>
+          Back to report history
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageActions>
         <Button size="sm" variant="outline" render={<Link href="/reports" />}>
           History
         </Button>
@@ -57,36 +72,23 @@ export default function ReportDetailPage() {
             Submit
           </Button>
         ) : null}
-      </>
-    ) : undefined,
-  });
+      </PageActions>
 
-  if (!report) {
-    return (
-      <div className="text-muted-foreground flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center text-sm">
-        <p>Report not found.</p>
-        <Button size="sm" variant="outline" render={<Link href="/reports" />}>
-          Back to report history
-        </Button>
-      </div>
-    );
-  }
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
+          <ReportWorkCard report={report} />
+          <AchievementsBlockersGrid report={report} />
+          <NextWeekCard report={report} />
+        </div>
 
-  return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-      <div className="space-y-6 xl:col-span-2">
-        <ReportWorkCard report={report} />
-        <AchievementsBlockersGrid report={report} />
-        <NextWeekCard report={report} />
-      </div>
-
-      <div className="space-y-6">
-        <EffortSummaryCard hours={report.hours} />
-        <FeedbackCard feedback={report.feedback} />
-        <VersionHistoryCard
-          versions={report.versions}
-          approved={report.status === "approved"}
-        />
+        <div className="space-y-6">
+          <EffortSummaryCard hours={report.hours} />
+          <FeedbackCard feedback={report.feedback} />
+          <VersionHistoryCard
+            versions={report.versions}
+            approved={report.status === "approved"}
+          />
+        </div>
       </div>
     </div>
   );

@@ -74,7 +74,7 @@ export default function SignupPage() {
 
         <div className="w-full max-w-sm space-y-8">
           <div className="space-y-1.5">
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
               Create your account
             </h1>
             <p className="text-muted-foreground text-sm">

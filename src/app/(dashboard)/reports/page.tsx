@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 
 import { usePageHeader } from "@/components/AppShell";
 import { FilterBar, type FilterConfig } from "@/components/FilterBar";
+import { PageActions } from "@/components/PageActions";
 import { ReportTable } from "@/components/ReportTable";
 import { Button } from "@/components/ui/button";
 import { weeks } from "@/lib/demo-data";
@@ -18,12 +19,6 @@ export default function ReportHistoryPage() {
   usePageHeader({
     title: "Report history",
     description: "All of your past weekly reports and their status.",
-    actions: (
-      <Button size="sm" render={<Link href="/reports/new" />}>
-        <Plus className="size-4" />
-        New report
-      </Button>
-    ),
   });
 
   const [search, setSearch] = useState("");
@@ -98,6 +93,13 @@ export default function ReportHistoryPage() {
 
   return (
     <div className="space-y-4">
+      <PageActions>
+        <Button size="sm" render={<Link href="/reports/new" />}>
+          <Plus className="size-4" />
+          New report
+        </Button>
+      </PageActions>
+
       <FilterBar
         search={search}
         onSearchChange={setSearch}

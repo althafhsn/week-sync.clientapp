@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { usePageHeader } from "@/components/AppShell";
+import { PageActions } from "@/components/PageActions";
 import { UserEditorCard } from "@/components/admin/UserEditorCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,12 +34,6 @@ export default function UsersPage() {
   usePageHeader({
     title: "Users",
     description: "Invite team members and managers, and assign roles.",
-    actions: (
-      <Button size="sm" onClick={() => setDraft(blankUser())}>
-        <Plus className="size-4" />
-        Add user
-      </Button>
-    ),
   });
 
   function handleSave() {
@@ -51,6 +46,13 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
+      <PageActions>
+        <Button size="sm" onClick={() => setDraft(blankUser())}>
+          <Plus className="size-4" />
+          Add user
+        </Button>
+      </PageActions>
+
       {draft ? (
         <UserEditorCard
           user={draft}

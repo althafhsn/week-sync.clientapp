@@ -78,7 +78,7 @@ export default function SettingsPage() {
             <Label>Email</Label>
             <Input value={currentUser?.email ?? ""} disabled className="h-10" />
           </div>
-          <Button className="h-10" onClick={handleSave}>
+          <Button className="h-10 w-full sm:w-auto" onClick={handleSave}>
             Save changes
           </Button>
         </CardContent>
@@ -94,7 +94,11 @@ export default function SettingsPage() {
             storage. Resetting restores the original seeded users, projects,
             and reports.
           </p>
-          <Button variant="outline" className="h-10" onClick={handleReset}>
+          <Button
+            variant="outline"
+            className="h-10 w-full sm:w-auto"
+            onClick={handleReset}
+          >
             Reset prototype data
           </Button>
         </CardContent>

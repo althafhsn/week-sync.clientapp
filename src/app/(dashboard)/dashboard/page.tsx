@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { usePageHeader } from "@/components/AppShell";
+import { PageActions } from "@/components/PageActions";
 import { ReportTable } from "@/components/ReportTable";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -29,21 +30,6 @@ export default function MemberDashboardPage() {
     description: currentUser
       ? `${currentUser.title} · ${currentUser.team} team`
       : undefined,
-    actions: (
-      <>
-        <Button size="sm" render={<Link href="/reports/new" />}>
-          <Plus className="size-4" />
-          New weekly report
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          render={<Link href="/reports" />}
-        >
-          View report history
-        </Button>
-      </>
-    ),
   });
 
   const myReports = currentUser
@@ -72,8 +58,18 @@ export default function MemberDashboardPage() {
   const recent = sorted.slice(0, 3);
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-6 ">
+      <PageActions>
+        <Button size="sm" render={<Link href="/reports/new" />} className="flex items-center gap-2 py-4">
+          <Plus className="size-4" />
+          New weekly report
+        </Button>
+        <Button size="sm" variant="outline" render={<Link href="/reports" />} className="flex items-center gap-2 py-4">
+          View report history
+        </Button>
+      </PageActions>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 ">
         <StatCard
           label="My reports"
           value={myReports.length}
