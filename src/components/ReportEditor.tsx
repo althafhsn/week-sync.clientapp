@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
+import { DateField } from "@/components/DateField";
 import { EntryListField } from "@/components/report-editor/EntryListField";
 import { NextWeekTaskList } from "@/components/report-editor/NextWeekTaskList";
 import { TaskRow } from "@/components/report-editor/TaskRow";
@@ -211,22 +212,18 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
             <>
               <div className="space-y-1.5">
                 <Label>Week start</Label>
-                <Input
-                  type="date"
+                <DateField
                   value={report.weekStart}
-                  onChange={(e) => patch({ weekStart: e.target.value })}
-                  className="h-10"
+                  onChange={(weekStart) => patch({ weekStart })}
                 />
               </div>
 
               <div className="space-y-1.5">
                 <Label>Week end</Label>
-                <Input
-                  type="date"
+                <DateField
                   value={report.weekEnd}
-                  min={report.weekStart}
-                  onChange={(e) => patch({ weekEnd: e.target.value })}
-                  className="h-10"
+                  minDate={report.weekStart}
+                  onChange={(weekEnd) => patch({ weekEnd })}
                 />
               </div>
             </>
