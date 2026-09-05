@@ -1,5 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { WeeklyReport } from "@/lib/types";
+import {
+  ACHIEVEMENT_TYPE_LABEL,
+  BLOCKER_TYPE_LABEL,
+  type WeeklyReport,
+} from "@/lib/types";
+
+function KeyTag() {
+  return (
+    <span className="bg-warning/25 text-warning-foreground inline-flex h-5 shrink-0 items-center rounded px-1.5 text-[0.7rem] font-medium">
+      Key
+    </span>
+  );
+}
 
 export function AchievementsBlockersGrid({ report }: { report: WeeklyReport }) {
   return (
@@ -9,14 +21,21 @@ export function AchievementsBlockersGrid({ report }: { report: WeeklyReport }) {
           <CardTitle>Achievements</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-sm whitespace-pre-wrap">
-            {report.achievements || "No achievements recorded."}
-          </p>
-          {report.keyAchievement ? (
-            <p className="text-success text-sm font-medium">
-              Key achievement: {report.keyAchievement}
+          {report.achievements.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No achievements recorded.
             </p>
-          ) : null}
+          ) : (
+            report.achievements.map((entry) => (
+              <div key={entry.id} className="flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {ACHIEVEMENT_TYPE_LABEL[entry.type]}:
+                </span>
+                <p className="text-sm">{entry.description || "—"}</p>
+                {entry.isKey ? <KeyTag /> : null}
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 
@@ -25,14 +44,21 @@ export function AchievementsBlockersGrid({ report }: { report: WeeklyReport }) {
           <CardTitle>Blockers &amp; risks</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-sm whitespace-pre-wrap">
-            {report.blockers || "No blockers recorded."}
-          </p>
-          {report.keyBlocker ? (
-            <p className="text-warning text-sm font-medium">
-              Key blocker: {report.keyBlocker}
+          {report.blockers.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No blockers recorded.
             </p>
-          ) : null}
+          ) : (
+            report.blockers.map((entry) => (
+              <div key={entry.id} className="flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {BLOCKER_TYPE_LABEL[entry.type]}:
+                </span>
+                <p className="text-sm">{entry.description || "—"}</p>
+                {entry.isKey ? <KeyTag /> : null}
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>
@@ -46,9 +72,15 @@ export function NextWeekCard({ report }: { report: WeeklyReport }) {
         <CardTitle>Next week</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm whitespace-pre-wrap">
-          {report.nextWeekTasks || "No plan recorded."}
-        </p>
+        {report.nextWeekTasks.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No plan recorded.</p>
+        ) : (
+          <ol className="list-decimal space-y-1 pl-4 text-sm">
+            {report.nextWeekTasks.map((task) => (
+              <li key={task.id}>{task.description || "—"}</li>
+            ))}
+          </ol>
+        )}
       </CardContent>
     </Card>
   );

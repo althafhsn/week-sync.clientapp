@@ -140,7 +140,14 @@ export default function SignupPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="role">I am a</Label>
-              <Select value={role} onValueChange={(value) => setRole(value as Role)}>
+              <Select
+                items={[
+                  { value: "member", label: "Team member" },
+                  { value: "manager", label: "Manager" },
+                ]}
+                value={role}
+                onValueChange={(value) => setRole(value as Role)}
+              >
                 <SelectTrigger id="role" className="h-11 w-full">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>

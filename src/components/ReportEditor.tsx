@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
+import { EntryListField } from "@/components/report-editor/EntryListField";
+import { NextWeekTaskList } from "@/components/report-editor/NextWeekTaskList";
 import { TaskRow } from "@/components/report-editor/TaskRow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +22,23 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { emptyReport, weeks } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
-import type { HoursByType, ReportTask, WeeklyReport } from "@/lib/types";
+import {
+  ACHIEVEMENT_TYPE_LABEL,
+  BLOCKER_TYPE_LABEL,
+  type AchievementType,
+  type BlockerType,
+  type HoursByType,
+  type ReportTask,
+  type WeeklyReport,
+} from "@/lib/types";
+
+const ACHIEVEMENT_TYPE_OPTIONS = (
+  Object.keys(ACHIEVEMENT_TYPE_LABEL) as AchievementType[]
+).map((value) => ({ value, label: ACHIEVEMENT_TYPE_LABEL[value] }));
+
+const BLOCKER_TYPE_OPTIONS = (Object.keys(BLOCKER_TYPE_LABEL) as BlockerType[]).map(
+  (value) => ({ value, label: BLOCKER_TYPE_LABEL[value] })
+);
 
 const HOUR_FIELDS: Array<{ key: keyof HoursByType; label: string }> = [
   { key: "development", label: "Development" },
@@ -119,7 +137,7 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Report details</CardTitle>
@@ -128,6 +146,7 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
           <div className="space-y-1.5">
             <Label>Reporting week</Label>
             <Select
+              items={weeks.map((w) => ({ value: w.start, label: w.label }))}
               value={report.weekStart}
               onValueChange={(value) => {
                 const week = weeks.find((w) => w.start === value);
@@ -156,6 +175,7 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
               </p>
             ) : (
               <Select
+                items={assignedProjects.map((p) => ({ value: p.id, label: p.name }))}
                 value={report.projectId}
                 onValueChange={(value) => patch({ projectId: value as string })}
               >
@@ -204,26 +224,25 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <Label>Tasks planned for next week</Label>
-            <Textarea
-              rows={4}
-              value={report.nextWeekTasks}
-              onChange={(e) => patch({ nextWeekTasks: e.target.value })}
+            <NextWeekTaskList
+              items={report.nextWeekTasks}
+              onChange={(nextWeekTasks) => patch({ nextWeekTasks })}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Achievements / highlights</Label>
-            <Textarea
-              rows={3}
-              value={report.achievements}
-              onChange={(e) => patch({ achievements: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Key achievement</Label>
-            <Input
-              value={report.keyAchievement}
-              onChange={(e) => patch({ keyAchievement: e.target.value })}
-              className="h-10"
+            <Label>Achievements / Highlights</Label>
+            <EntryListField
+              items={report.achievements}
+              typeOptions={ACHIEVEMENT_TYPE_OPTIONS}
+              addLabel="Add"
+              keyLabel="key Achievement"
+              onChange={(achievements) => patch({ achievements })}
+              makeEntry={() => ({
+                id: `ach-${Math.random().toString(36).slice(2, 8)}`,
+                type: "achievement",
+                description: "",
+                isKey: report.achievements.length === 0,
+              })}
             />
           </div>
         </CardContent>
@@ -236,18 +255,18 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <Label>Blockers / challenges</Label>
-            <Textarea
-              rows={3}
-              value={report.blockers}
-              onChange={(e) => patch({ blockers: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Key blocker</Label>
-            <Input
-              value={report.keyBlocker}
-              onChange={(e) => patch({ keyBlocker: e.target.value })}
-              className="h-10"
+            <EntryListField
+              items={report.blockers}
+              typeOptions={BLOCKER_TYPE_OPTIONS}
+              addLabel="Add "
+              keyLabel="key Issue"
+              onChange={(blockers) => patch({ blockers })}
+              makeEntry={() => ({
+                id: `blk-${Math.random().toString(36).slice(2, 8)}`,
+                type: "blocker",
+                description: "",
+                isKey: report.blockers.length === 0,
+              })}
             />
           </div>
 

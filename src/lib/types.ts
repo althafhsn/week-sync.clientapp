@@ -32,6 +32,31 @@ export interface Project {
   memberIds: string[];
 }
 
+export interface NextWeekTask {
+  id: string;
+  description: string;
+}
+
+export type AchievementType = "achievement" | "highlight";
+
+export interface AchievementEntry {
+  id: string;
+  type: AchievementType;
+  description: string;
+  /** Only one entry in the list should be flagged as key at a time. */
+  isKey: boolean;
+}
+
+export type BlockerType = "blocker" | "challenge";
+
+export interface BlockerEntry {
+  id: string;
+  type: BlockerType;
+  description: string;
+  /** Only one entry in the list should be flagged as key at a time. */
+  isKey: boolean;
+}
+
 export interface ReportTask {
   id: string;
   name: string;
@@ -77,11 +102,9 @@ export interface WeeklyReport {
   weekEnd: string;
   status: ReportStatus;
   tasks: ReportTask[];
-  nextWeekTasks: string;
-  blockers: string;
-  keyBlocker: string;
-  achievements: string;
-  keyAchievement: string;
+  nextWeekTasks: NextWeekTask[];
+  blockers: BlockerEntry[];
+  achievements: AchievementEntry[];
   hours: HoursByType;
   notes: string;
   links: string;
@@ -117,6 +140,16 @@ export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
   proposed: "Proposed",
   active: "Active",
   archived: "Archived",
+};
+
+export const ACHIEVEMENT_TYPE_LABEL: Record<AchievementType, string> = {
+  achievement: "Achievement",
+  highlight: "Highlight",
+};
+
+export const BLOCKER_TYPE_LABEL: Record<BlockerType, string> = {
+  blocker: "Blocker",
+  challenge: "Challenge",
 };
 
 export function totalHours(h: HoursByType) {

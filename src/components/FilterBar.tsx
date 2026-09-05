@@ -48,6 +48,10 @@ export function FilterBar({
       {filters.map((filter) => (
         <Select
           key={filter.id}
+          items={[
+            { value: "all", label: `All ${filter.label}` },
+            ...filter.options,
+          ]}
           value={filter.value}
           onValueChange={(value) => filter.onChange(value as string)}
         >

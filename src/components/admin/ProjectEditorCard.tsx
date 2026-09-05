@@ -102,6 +102,10 @@ export function ProjectEditorCard({
         <div className="space-y-1.5">
           <Label>Status</Label>
           <Select
+            items={PROJECT_STATUSES.map((status) => ({
+              value: status,
+              label: PROJECT_STATUS_LABEL[status],
+            }))}
             value={project.status}
             onValueChange={(value) =>
               onChange({ ...project, status: value as ProjectStatus })

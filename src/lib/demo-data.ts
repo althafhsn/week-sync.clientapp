@@ -360,12 +360,42 @@ export function buildSeedReports(): WeeklyReport[] {
       weekEnd: week.end,
       status: spec.status,
       tasks: tasksFor(i + 1),
-      nextWeekTasks:
-        "1. Finish proration edge cases (8h)\n2. Pair on release checklist (3h)\n3. Draft handover notes for the on-call rotation (2h)",
-      blockers: blockerPool[i % blockerPool.length]!,
-      keyBlocker: blockerPool[(i + 1) % blockerPool.length]!,
-      achievements: achievementPool[i % achievementPool.length]!,
-      keyAchievement: achievementPool[(i + 2) % achievementPool.length]!,
+      nextWeekTasks: [
+        { id: `nw-${i}-0`, description: "Finish proration edge cases (8h)" },
+        { id: `nw-${i}-1`, description: "Pair on release checklist (3h)" },
+        {
+          id: `nw-${i}-2`,
+          description: "Draft handover notes for the on-call rotation (2h)",
+        },
+      ],
+      blockers: [
+        {
+          id: `blk-${i}-0`,
+          type: "blocker",
+          description: blockerPool[i % blockerPool.length]!,
+          isKey: true,
+        },
+        {
+          id: `blk-${i}-1`,
+          type: "challenge",
+          description: blockerPool[(i + 1) % blockerPool.length]!,
+          isKey: false,
+        },
+      ],
+      achievements: [
+        {
+          id: `ach-${i}-0`,
+          type: "achievement",
+          description: achievementPool[i % achievementPool.length]!,
+          isKey: true,
+        },
+        {
+          id: `ach-${i}-1`,
+          type: "highlight",
+          description: achievementPool[(i + 2) % achievementPool.length]!,
+          isKey: false,
+        },
+      ],
       hours: hours(i + 2),
       notes: "Standups moved to 9:30 for the rest of the sprint.",
       links: "https://github.com/northwind/atlas/pull/2841",
@@ -402,11 +432,25 @@ export function emptyReport(memberId: string, projectId: string): WeeklyReport {
         deliverable: "",
       },
     ],
-    nextWeekTasks: "",
-    blockers: "",
-    keyBlocker: "",
-    achievements: "",
-    keyAchievement: "",
+    nextWeekTasks: [
+      { id: `nw-${Math.random().toString(36).slice(2, 8)}`, description: "" },
+    ],
+    blockers: [
+      {
+        id: `blk-${Math.random().toString(36).slice(2, 8)}`,
+        type: "blocker",
+        description: "",
+        isKey: true,
+      },
+    ],
+    achievements: [
+      {
+        id: `ach-${Math.random().toString(36).slice(2, 8)}`,
+        type: "achievement",
+        description: "",
+        isKey: true,
+      },
+    ],
     hours: { development: 0, testing: 0, meetings: 0, documentation: 0 },
     notes: "",
     links: "",

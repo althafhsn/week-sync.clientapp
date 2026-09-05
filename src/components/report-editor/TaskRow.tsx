@@ -72,6 +72,7 @@ export function TaskRow({
         <div className="space-y-1.5">
           <Label>Priority</Label>
           <Select
+            items={PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABEL[p] }))}
             value={task.priority}
             onValueChange={(value) =>
               patch({ priority: value as TaskPriority })
@@ -93,6 +94,7 @@ export function TaskRow({
         <div className="space-y-1.5">
           <Label>Status</Label>
           <Select
+            items={STATUSES.map((s) => ({ value: s, label: TASK_STATUS_LABEL[s] }))}
             value={task.status}
             onValueChange={(value) => patch({ status: value as TaskStatus })}
           >

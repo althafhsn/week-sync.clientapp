@@ -20,7 +20,7 @@ import type {
   WeeklyReport,
 } from "@/lib/types";
 
-const STORAGE_KEY = "weekly-review-hub-demo-v3";
+const STORAGE_KEY = "weekly-review-hub-demo-v4";
 
 interface StoreState {
   users: User[];
@@ -57,9 +57,7 @@ function snapshotOf(report: WeeklyReport): Omit<WeeklyReport, "versions"> {
     tasks: report.tasks,
     nextWeekTasks: report.nextWeekTasks,
     blockers: report.blockers,
-    keyBlocker: report.keyBlocker,
     achievements: report.achievements,
-    keyAchievement: report.keyAchievement,
     hours: report.hours,
     notes: report.notes,
     links: report.links,

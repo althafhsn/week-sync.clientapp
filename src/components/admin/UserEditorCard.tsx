@@ -76,6 +76,10 @@ export function UserEditorCard({
           <div className="space-y-1.5">
             <Label>Role</Label>
             <Select
+              items={[
+                { value: "member", label: "Team member" },
+                { value: "manager", label: "Manager" },
+              ]}
               value={user.role}
               onValueChange={(value) =>
                 onChange({ ...user, role: value as Role })
