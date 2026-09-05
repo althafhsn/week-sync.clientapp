@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Briefcase, UserRound } from "lucide-react";
 
+import { destinationFor } from "@/components/auth/AuthGate";
 import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
 import { DemoAccountCard } from "@/components/auth/DemoAccountCard";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -21,10 +22,6 @@ const demoAccounts = DEMO_SHORTCUT_EMAILS.map(
   (email) => seedUsers.find((user) => user.email === email)!
 );
 
-function destinationFor(user: User) {
-  return user.role === "manager" ? "/team" : "/dashboard";
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const signIn = useAuthStore((state) => state.signIn);
@@ -33,7 +30,7 @@ export default function LoginPage() {
 
   function handleSignIn(user: User) {
     signIn(user);
-    router.push(destinationFor(user));
+    router.push(destinationFor(user.role));
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

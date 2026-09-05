@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { destinationFor } from "@/components/auth/AuthGate";
 import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ export default function SignupPage() {
     };
 
     signIn(newUser);
-    router.push(role === "manager" ? "/team" : "/dashboard");
+    router.push(destinationFor(role));
   }
 
   return (
