@@ -12,26 +12,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  PRIORITY_LABEL,
-  TASK_STATUS_LABEL,
-  type ReportTask,
-  type TaskPriority,
-  type TaskStatus,
-} from "@/lib/types";
-
-const PRIORITIES = Object.keys(PRIORITY_LABEL) as TaskPriority[];
-const STATUSES = Object.keys(TASK_STATUS_LABEL) as TaskStatus[];
+import type { PriorityType, TaskStatus as ApiTaskStatus } from "@/lib/api/types";
+import type { ReportTask } from "@/lib/types";
 
 export function TaskRow({
   task,
   index,
+  priorityTypes,
+  taskStatuses,
   onChange,
   onRemove,
   disableRemove,
 }: {
   task: ReportTask;
   index: number;
+  priorityTypes: PriorityType[];
+  taskStatuses: ApiTaskStatus[];
   onChange: (task: ReportTask) => void;
   onRemove: () => void;
   disableRemove: boolean;
@@ -72,19 +68,25 @@ export function TaskRow({
         <div className="space-y-1.5">
           <Label>Priority</Label>
           <Select
-            items={PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABEL[p] }))}
-            value={task.priority}
-            onValueChange={(value) =>
-              patch({ priority: value as TaskPriority })
-            }
+            items={priorityTypes.map((p) => ({ value: p.id, label: p.name }))}
+            value={task.priorityTypeId}
+            onValueChange={(value) => {
+              const selected = priorityTypes.find((p) => p.id === value);
+              if (selected) {
+                patch({
+                  priorityTypeId: selected.id,
+                  priorityName: selected.name,
+                });
+              }
+            }}
           >
             <SelectTrigger className="h-10 w-full">
-              <SelectValue />
+              <SelectValue>{task.priorityName || "Select a priority"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {PRIORITIES.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {PRIORITY_LABEL[p]}
+              {priorityTypes.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -94,17 +96,22 @@ export function TaskRow({
         <div className="space-y-1.5">
           <Label>Status</Label>
           <Select
-            items={STATUSES.map((s) => ({ value: s, label: TASK_STATUS_LABEL[s] }))}
-            value={task.status}
-            onValueChange={(value) => patch({ status: value as TaskStatus })}
+            items={taskStatuses.map((s) => ({ value: s.id, label: s.name }))}
+            value={task.taskStatusId}
+            onValueChange={(value) => {
+              const selected = taskStatuses.find((s) => s.id === value);
+              if (selected) {
+                patch({ taskStatusId: selected.id, statusName: selected.name });
+              }
+            }}
           >
             <SelectTrigger className="h-10 w-full">
-              <SelectValue />
+              <SelectValue>{task.statusName || "Select a status"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {TASK_STATUS_LABEL[s]}
+              {taskStatuses.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
                 </SelectItem>
               ))}
             </SelectContent>

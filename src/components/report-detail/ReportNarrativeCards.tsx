@@ -1,9 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ACHIEVEMENT_TYPE_LABEL,
-  BLOCKER_TYPE_LABEL,
-  type WeeklyReport,
-} from "@/lib/types";
+import type { WeeklyReport } from "@/lib/types";
 
 function KeyTag() {
   return (
@@ -29,7 +25,7 @@ export function AchievementsBlockersGrid({ report }: { report: WeeklyReport }) {
             report.achievements.map((entry) => (
               <div key={entry.id} className="flex flex-wrap items-center gap-2">
                 <span className="text-muted-foreground text-sm">
-                  {ACHIEVEMENT_TYPE_LABEL[entry.type]}:
+                  {entry.typeName}:
                 </span>
                 <p className="text-sm">{entry.description || "—"}</p>
                 {entry.isKey ? <KeyTag /> : null}
@@ -52,7 +48,7 @@ export function AchievementsBlockersGrid({ report }: { report: WeeklyReport }) {
             report.blockers.map((entry) => (
               <div key={entry.id} className="flex flex-wrap items-center gap-2">
                 <span className="text-muted-foreground text-sm">
-                  {BLOCKER_TYPE_LABEL[entry.type]}:
+                  {entry.typeName}:
                 </span>
                 <p className="text-sm">{entry.description || "—"}</p>
                 {entry.isKey ? <KeyTag /> : null}

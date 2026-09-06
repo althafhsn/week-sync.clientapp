@@ -163,83 +163,106 @@ export function weekLabel(start: string, end?: string) {
   return `${startLabel} – ${SHORT_DATE_WITH_YEAR.format(endDate)}`;
 }
 
+// Real priority-types: 1=Medium, 2=High, 3=Critical (no "Low").
+// Real task-statuses: 1=In Progress, 2=Blocked, 3=Carried Over (no "Completed").
+const PRIORITY = {
+  medium: { priorityTypeId: 1, priorityName: "Medium" },
+  high: { priorityTypeId: 2, priorityName: "High" },
+  critical: { priorityTypeId: 3, priorityName: "Critical" },
+};
+
+const TASK_STATUS = {
+  inProgress: { taskStatusId: 1, statusName: "In Progress" },
+  blocked: { taskStatusId: 2, statusName: "Blocked" },
+  carriedOver: { taskStatusId: 3, statusName: "Carried Over" },
+};
+
+// Real report-highlight-types: 1=Achievement, 2=Highlight (both category
+// ACHIEVEMENT), 3=Blocker, 4=Challenge (both category BLOCKER).
+const HIGHLIGHT_TYPE = {
+  achievement: { reportHighlightTypeId: 1, typeName: "Achievement" },
+  highlight: { reportHighlightTypeId: 2, typeName: "Highlight" },
+  blocker: { reportHighlightTypeId: 3, typeName: "Blocker" },
+  challenge: { reportHighlightTypeId: 4, typeName: "Challenge" },
+};
+
 const taskPool: Array<Omit<ReportTask, "id">> = [
   {
     name: "Invoice PDF renderer",
-    priority: "high",
+    ...PRIORITY.high,
     plannedPct: 100,
     actualPct: 100,
-    status: "completed",
+    ...TASK_STATUS.inProgress,
     plannedHours: 12,
     timeSpent: 13,
     deliverable: "PR #2841",
   },
   {
     name: "Proration edge cases",
-    priority: "critical",
+    ...PRIORITY.critical,
     plannedPct: 100,
     actualPct: 75,
-    status: "in_progress",
+    ...TASK_STATUS.inProgress,
     plannedHours: 10,
     timeSpent: 9,
     deliverable: "Spec doc v3",
   },
   {
     name: "Regression suite for checkout",
-    priority: "medium",
+    ...PRIORITY.medium,
     plannedPct: 80,
     actualPct: 80,
-    status: "completed",
+    ...TASK_STATUS.inProgress,
     plannedHours: 8,
     timeSpent: 7.5,
     deliverable: "42 new cases",
   },
   {
     name: "Offline sync prototype",
-    priority: "high",
+    ...PRIORITY.high,
     plannedPct: 60,
     actualPct: 35,
-    status: "blocked",
+    ...TASK_STATUS.blocked,
     plannedHours: 9,
     timeSpent: 6,
     deliverable: "Branch feat/sync",
   },
   {
     name: "Warehouse schema mapping",
-    priority: "medium",
+    ...PRIORITY.medium,
     plannedPct: 100,
     actualPct: 100,
-    status: "completed",
+    ...TASK_STATUS.inProgress,
     plannedHours: 6,
     timeSpent: 6,
     deliverable: "dbt models",
   },
   {
     name: "Agent console filters",
-    priority: "low",
+    ...PRIORITY.medium,
     plannedPct: 50,
     actualPct: 20,
-    status: "carried_over",
+    ...TASK_STATUS.carriedOver,
     plannedHours: 5,
     timeSpent: 2,
     deliverable: "Figma handoff",
   },
   {
     name: "Design tokens audit",
-    priority: "medium",
+    ...PRIORITY.medium,
     plannedPct: 100,
     actualPct: 90,
-    status: "in_progress",
+    ...TASK_STATUS.inProgress,
     plannedHours: 7,
     timeSpent: 8,
     deliverable: "Token sheet",
   },
   {
     name: "Nightly pipeline alerting",
-    priority: "high",
+    ...PRIORITY.high,
     plannedPct: 100,
     actualPct: 100,
-    status: "completed",
+    ...TASK_STATUS.inProgress,
     plannedHours: 6,
     timeSpent: 5,
     deliverable: "Runbook + alerts",
@@ -399,13 +422,13 @@ export function buildSeedReports(): WeeklyReport[] {
       blockers: [
         {
           id: `blk-${i}-0`,
-          type: "blocker",
+          ...HIGHLIGHT_TYPE.blocker,
           description: blockerPool[i % blockerPool.length]!,
           isKey: true,
         },
         {
           id: `blk-${i}-1`,
-          type: "challenge",
+          ...HIGHLIGHT_TYPE.challenge,
           description: blockerPool[(i + 1) % blockerPool.length]!,
           isKey: false,
         },
@@ -413,13 +436,13 @@ export function buildSeedReports(): WeeklyReport[] {
       achievements: [
         {
           id: `ach-${i}-0`,
-          type: "achievement",
+          ...HIGHLIGHT_TYPE.achievement,
           description: achievementPool[i % achievementPool.length]!,
           isKey: true,
         },
         {
           id: `ach-${i}-1`,
-          type: "highlight",
+          ...HIGHLIGHT_TYPE.highlight,
           description: achievementPool[(i + 2) % achievementPool.length]!,
           isKey: false,
         },
@@ -451,10 +474,10 @@ export function emptyReport(memberId: string, projectId: string): WeeklyReport {
       {
         id: `t-${Math.random().toString(36).slice(2, 8)}`,
         name: "",
-        priority: "medium",
+        ...PRIORITY.medium,
         plannedPct: 100,
         actualPct: 0,
-        status: "in_progress",
+        ...TASK_STATUS.inProgress,
         plannedHours: 8,
         timeSpent: 0,
         deliverable: "",
@@ -466,7 +489,7 @@ export function emptyReport(memberId: string, projectId: string): WeeklyReport {
     blockers: [
       {
         id: `blk-${Math.random().toString(36).slice(2, 8)}`,
-        type: "blocker",
+        ...HIGHLIGHT_TYPE.blocker,
         description: "",
         isKey: true,
       },
@@ -474,7 +497,7 @@ export function emptyReport(memberId: string, projectId: string): WeeklyReport {
     achievements: [
       {
         id: `ach-${Math.random().toString(36).slice(2, 8)}`,
-        type: "achievement",
+        ...HIGHLIGHT_TYPE.achievement,
         description: "",
         isKey: true,
       },

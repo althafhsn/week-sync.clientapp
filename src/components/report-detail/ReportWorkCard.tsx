@@ -30,8 +30,8 @@ export function ReportWorkCard({
               <p className="text-sm font-medium">
                 {task.name || "Untitled task"}
               </p>
-              <PriorityTag priority={task.priority} />
-              <TaskStatusBadge status={task.status} />
+              <PriorityTag priority={task.priorityName} />
+              <TaskStatusBadge status={task.statusName} />
             </div>
             {task.deliverable ? (
               <p className="text-muted-foreground mt-1 text-sm">

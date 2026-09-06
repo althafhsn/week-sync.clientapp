@@ -149,7 +149,9 @@ export default function SignupPage() {
                 onValueChange={(value) => setRole(value as Role)}
               >
                 <SelectTrigger id="role" className="h-11 w-full">
-                  <SelectValue placeholder="Select a role" />
+                  <SelectValue placeholder="Select a role">
+                    {role === "manager" ? "Manager" : "Team member"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="member">Team member</SelectItem>

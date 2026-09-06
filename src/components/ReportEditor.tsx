@@ -25,16 +25,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { emptyReport, weekLabel, weeks } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
 import { listProjects } from "@/lib/api/projects-client";
-import type { Project as ApiProject } from "@/lib/api/types";
-import {
-  ACHIEVEMENT_TYPE_LABEL,
-  BLOCKER_TYPE_LABEL,
-  type AchievementType,
-  type BlockerType,
-  type HoursByType,
-  type Project,
-  type ReportTask,
-  type WeeklyReport,
+import { listPriorityTypes } from "@/lib/api/priority-types-client";
+import { listTaskStatuses } from "@/lib/api/task-statuses-client";
+import { listReportHighlightTypes } from "@/lib/api/report-highlight-types-client";
+import { listReportHourTypes } from "@/lib/api/report-hour-types-client";
+import { listReportStatuses } from "@/lib/api/report-statuses-client";
+import { createReportWithVersion } from "@/lib/api/reports-client";
+import type {
+  CreateReportHoursInput,
+  CreateReportWithVersionRequest,
+  Project as ApiProject,
+  PriorityType,
+  ReportHighlightType,
+  ReportHourType,
+  ReportStatus as ApiReportStatus,
+  TaskStatus as ApiTaskStatus,
+} from "@/lib/api/types";
+import type {
+  HighlightEntry,
+  HoursByType,
+  Project,
+  ReportTask,
+  WeeklyReport,
 } from "@/lib/types";
 
 const ASSIGNED_PROJECTS_INCLUDE = ["users", "projectStatus"];
@@ -54,32 +66,50 @@ function toDemoProject(project: ApiProject): Project {
   };
 }
 
-const ACHIEVEMENT_TYPE_OPTIONS = (
-  Object.keys(ACHIEVEMENT_TYPE_LABEL) as AchievementType[]
-).map((value) => ({ value, label: ACHIEVEMENT_TYPE_LABEL[value] }));
-
-const BLOCKER_TYPE_OPTIONS = (Object.keys(BLOCKER_TYPE_LABEL) as BlockerType[]).map(
-  (value) => ({ value, label: BLOCKER_TYPE_LABEL[value] })
-);
-
-const HOUR_FIELDS: Array<{ key: keyof HoursByType; label: string }> = [
-  { key: "development", label: "Development" },
-  { key: "testing", label: "Testing" },
-  { key: "meetings", label: "Meetings" },
-  { key: "documentation", label: "Documentation" },
+const HOUR_FIELDS: Array<{
+  key: keyof HoursByType;
+  label: string;
+  realName: string;
+}> = [
+  { key: "development", label: "Development", realName: "Development" },
+  { key: "testing", label: "Testing", realName: "Testing" },
+  { key: "meetings", label: "Meetings", realName: "Meeting" },
+  { key: "documentation", label: "Documentation", realName: "Documentation" },
 ];
 
-function makeTask(): ReportTask {
+function makeTask(
+  priorityTypes: PriorityType[],
+  taskStatuses: ApiTaskStatus[]
+): ReportTask {
+  const priority = priorityTypes.find((p) => p.name === "Medium") ?? priorityTypes[0];
+  const status = taskStatuses.find((s) => s.name === "In Progress") ?? taskStatuses[0];
   return {
     id: `t-${Math.random().toString(36).slice(2, 8)}`,
     name: "",
-    priority: "medium",
+    priorityTypeId: priority?.id ?? 0,
+    priorityName: priority?.name ?? "",
     plannedPct: 100,
     actualPct: 0,
-    status: "in_progress",
+    taskStatusId: status?.id ?? 0,
+    statusName: status?.name ?? "",
     plannedHours: 0,
     timeSpent: 0,
     deliverable: "",
+  };
+}
+
+function makeHighlightEntry(
+  types: ReportHighlightType[],
+  isKey: boolean,
+  idPrefix: string
+): HighlightEntry {
+  const type = types[0];
+  return {
+    id: `${idPrefix}-${Math.random().toString(36).slice(2, 8)}`,
+    reportHighlightTypeId: type?.id ?? 0,
+    typeName: type?.name ?? "",
+    description: "",
+    isKey,
   };
 }
 
@@ -88,7 +118,16 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
   const { currentUser, saveReport, submitReport, upsertProject } = useStore();
 
   const [assignedProjects, setAssignedProjects] = useState<Project[]>([]);
-  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [priorityTypes, setPriorityTypes] = useState<PriorityType[]>([]);
+  const [taskStatuses, setTaskStatuses] = useState<ApiTaskStatus[]>([]);
+  const [highlightTypes, setHighlightTypes] = useState<ReportHighlightType[]>([]);
+  const [reportHourTypes, setReportHourTypes] = useState<ReportHourType[]>([]);
+  const [reportStatuses, setReportStatuses] = useState<ApiReportStatus[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  const achievementTypes = highlightTypes.filter((t) => t.category === "ACHIEVEMENT");
+  const blockerTypes = highlightTypes.filter((t) => t.category === "BLOCKER");
 
   const [report, setReport] = useState<WeeklyReport>(() =>
     existing
@@ -100,14 +139,26 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
     if (!currentUser) return;
     let cancelled = false;
 
-    listProjects(ASSIGNED_PROJECTS_INCLUDE, { userId: currentUser.id })
-      .then((realProjects) => {
+    Promise.all([
+      listProjects(ASSIGNED_PROJECTS_INCLUDE, { userId: currentUser.id }),
+      listPriorityTypes(),
+      listTaskStatuses(),
+      listReportHighlightTypes(),
+      listReportHourTypes(),
+      listReportStatuses(),
+    ])
+      .then(([realProjects, priorities, statuses, highlights, hourTypes, statusList]) => {
         if (cancelled) return;
         const active = realProjects
           .filter((p) => p.projectStatus?.name.toLowerCase() === "active")
           .map(toDemoProject);
         active.forEach(upsertProject);
         setAssignedProjects(active);
+        setPriorityTypes(priorities);
+        setTaskStatuses(statuses);
+        setHighlightTypes(highlights);
+        setReportHourTypes(hourTypes);
+        setReportStatuses(statusList);
         if (!existing && active.length > 0) {
           setReport((prev) =>
             prev.projectId ? prev : { ...prev, projectId: active[0].id }
@@ -116,11 +167,13 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
       })
       .catch((error) =>
         toast.error(
-          error instanceof Error ? error.message : "Failed to load your projects."
+          error instanceof Error
+            ? error.message
+            : "Failed to load the report form's data."
         )
       )
       .finally(() => {
-        if (!cancelled) setLoadingProjects(false);
+        if (!cancelled) setLoadingLookups(false);
       });
 
     return () => {
@@ -153,7 +206,10 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
   }
 
   function addTask() {
-    setReport((prev) => ({ ...prev, tasks: [...prev.tasks, makeTask()] }));
+    setReport((prev) => ({
+      ...prev,
+      tasks: [...prev.tasks, makeTask(priorityTypes, taskStatuses)],
+    }));
   }
 
   function removeTask(id: string) {
@@ -184,15 +240,98 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
     return true;
   }
 
-  function handleSaveDraft() {
-    if (!validate()) return;
+  // Builds the real backend's nested create payload from the current local
+  // report state. Only meaningful for a brand-new report — there's no
+  // confirmed "update" endpoint yet, so editing/resubmitting an existing
+  // report (see the `existing` guard at each call site) stays local-only
+  // for now rather than risk creating a duplicate report on the backend.
+  function buildCreatePayload(statusName: string): CreateReportWithVersionRequest | null {
+    const status = reportStatuses.find((s) => s.name === statusName);
+    if (!currentUser || !status) return null;
+
+    const hours: CreateReportHoursInput[] = HOUR_FIELDS.map((field) => {
+      const hourType = reportHourTypes.find((t) => t.name === field.realName);
+      return { reportHourTypeId: hourType?.id ?? 0, hours: report.hours[field.key] };
+    }).filter((h) => h.reportHourTypeId !== 0);
+
+    return {
+      userId: currentUser.id,
+      projectId: report.projectId,
+      version: {
+        reportStatusId: status.id,
+        notes: report.notes || undefined,
+        startDate: report.weekStart,
+        endDate: report.weekEnd,
+        links: report.links || undefined,
+        tasks: report.tasks.map((t) => ({
+          name: t.name,
+          priorityTypeId: t.priorityTypeId,
+          taskStatusId: t.taskStatusId,
+          planned: t.plannedPct,
+          actual: t.actualPct,
+          plannedHour: t.plannedHours,
+          actualHour: t.timeSpent,
+          deliverable: t.deliverable || undefined,
+        })),
+        nextWeekTasks: report.nextWeekTasks
+          .filter((t) => t.description.trim())
+          .map((t) => ({ description: t.description })),
+        highlights: [...report.achievements, ...report.blockers].map((e) => ({
+          reportHighlightTypeId: e.reportHighlightTypeId,
+          isKey: e.isKey,
+        })),
+        hours,
+      },
+    };
+  }
+
+  async function handleSaveDraft() {
+    if (!validate() || submitting) return;
+
+    if (!existing) {
+      const payload = buildCreatePayload("Draft");
+      if (!payload) {
+        toast.error("Could not prepare the report — try reloading the page.");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        await createReportWithVersion(payload);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to save the report.");
+        setSubmitting(false);
+        return;
+      }
+      setSubmitting(false);
+    }
+
     saveReport(report);
     toast.success("Draft saved.");
     router.push(`/reports/${report.id}`);
   }
 
-  function handleSubmit() {
-    if (!validate()) return;
+  async function handleSubmit() {
+    if (!validate() || submitting) return;
+
+    if (!existing) {
+      const payload = buildCreatePayload("Submitted");
+      if (!payload) {
+        toast.error("Could not prepare the report — try reloading the page.");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        await createReportWithVersion(payload);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to submit the report."
+        );
+        setSubmitting(false);
+        return;
+      }
+      setSubmitting(false);
+    }
+
     saveReport(report);
     submitReport(report.id);
     toast.success(
@@ -247,7 +386,9 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
                 }}
               >
                 <SelectTrigger className="h-10 w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {weekLabel(report.weekStart, report.weekEnd)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {weeks.map((w) => (
@@ -281,7 +422,7 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
 
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Project</Label>
-            {loadingProjects ? (
+            {loadingLookups ? (
               <Skeleton className="h-10 w-full rounded-lg" />
             ) : assignedProjects.length === 0 ? (
               <p className="text-destructive text-sm">
@@ -295,7 +436,10 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
                 onValueChange={(value) => patch({ projectId: value as string })}
               >
                 <SelectTrigger className="h-10 w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {assignedProjects.find((p) => p.id === report.projectId)?.name ??
+                      "Select a project"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {assignedProjects.map((p) => (
@@ -324,6 +468,8 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
               key={task.id}
               task={task}
               index={i}
+              priorityTypes={priorityTypes}
+              taskStatuses={taskStatuses}
               onChange={(next) => updateTask(task.id, next)}
               onRemove={() => removeTask(task.id)}
               disableRemove={report.tasks.length <= 1}
@@ -348,16 +494,17 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
             <Label>Achievements / Highlights</Label>
             <EntryListField
               items={report.achievements}
-              typeOptions={ACHIEVEMENT_TYPE_OPTIONS}
+              typeOptions={achievementTypes}
               addLabel="Add"
               keyLabel="key Achievement"
               onChange={(achievements) => patch({ achievements })}
-              makeEntry={() => ({
-                id: `ach-${Math.random().toString(36).slice(2, 8)}`,
-                type: "achievement",
-                description: "",
-                isKey: report.achievements.length === 0,
-              })}
+              makeEntry={() =>
+                makeHighlightEntry(
+                  achievementTypes,
+                  report.achievements.length === 0,
+                  "ach"
+                )
+              }
             />
           </div>
         </CardContent>
@@ -372,16 +519,17 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
             <Label>Blockers / challenges</Label>
             <EntryListField
               items={report.blockers}
-              typeOptions={BLOCKER_TYPE_OPTIONS}
+              typeOptions={blockerTypes}
               addLabel="Add "
               keyLabel="key Issue"
               onChange={(blockers) => patch({ blockers })}
-              makeEntry={() => ({
-                id: `blk-${Math.random().toString(36).slice(2, 8)}`,
-                type: "blocker",
-                description: "",
-                isKey: report.blockers.length === 0,
-              })}
+              makeEntry={() =>
+                makeHighlightEntry(
+                  blockerTypes,
+                  report.blockers.length === 0,
+                  "blk"
+                )
+              }
             />
           </div>
 
@@ -432,17 +580,21 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
           variant="outline"
           className="h-11"
           onClick={handleSaveDraft}
-          disabled={loadingProjects}
+          disabled={loadingLookups || submitting}
         >
-          Save draft
+          {submitting ? "Saving…" : "Save draft"}
         </Button>
         <Button
           type="button"
           className="h-11"
           onClick={handleSubmit}
-          disabled={loadingProjects}
+          disabled={loadingLookups || submitting}
         >
-          {wasNeedsCorrection ? "Resubmit for review" : "Submit for review"}
+          {submitting
+            ? "Submitting…"
+            : wasNeedsCorrection
+              ? "Resubmit for review"
+              : "Submit for review"}
         </Button>
       </div>
     </div>

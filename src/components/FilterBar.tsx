@@ -56,7 +56,12 @@ export function FilterBar({
           onValueChange={(value) => filter.onChange(value as string)}
         >
           <SelectTrigger className="h-10 w-auto min-w-[180px]">
-            <SelectValue />
+            <SelectValue>
+              {filter.value === "all"
+                ? `All ${filter.label}`
+                : (filter.options.find((o) => o.value === filter.value)?.label ??
+                  `All ${filter.label}`)}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All {filter.label}</SelectItem>

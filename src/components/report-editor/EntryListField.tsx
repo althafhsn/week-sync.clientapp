@@ -12,16 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ReportHighlightType } from "@/lib/api/types";
+import type { HighlightEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-interface Entry<T extends string> {
-  id: string;
-  type: T;
-  description: string;
-  isKey: boolean;
-}
-
-export function EntryListField<T extends string>({
+export function EntryListField({
   items,
   typeOptions,
   onChange,
@@ -29,14 +24,14 @@ export function EntryListField<T extends string>({
   keyLabel,
   makeEntry,
 }: {
-  items: Entry<T>[];
-  typeOptions: Array<{ value: T; label: string }>;
-  onChange: (items: Entry<T>[]) => void;
+  items: HighlightEntry[];
+  typeOptions: ReportHighlightType[];
+  onChange: (items: HighlightEntry[]) => void;
   addLabel: string;
   keyLabel: string;
-  makeEntry: () => Entry<T>;
+  makeEntry: () => HighlightEntry;
 }) {
-  function updateItem(id: string, patch: Partial<Entry<T>>) {
+  function updateItem(id: string, patch: Partial<HighlightEntry>) {
     onChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }
 
@@ -65,17 +60,25 @@ export function EntryListField<T extends string>({
           className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-start"
         >
           <Select
-            items={typeOptions}
-            value={item.type}
-            onValueChange={(value) => updateItem(item.id, { type: value as T })}
+            items={typeOptions.map((t) => ({ value: t.id, label: t.name }))}
+            value={item.reportHighlightTypeId}
+            onValueChange={(value) => {
+              const selected = typeOptions.find((t) => t.id === value);
+              if (selected) {
+                updateItem(item.id, {
+                  reportHighlightTypeId: selected.id,
+                  typeName: selected.name,
+                });
+              }
+            }}
           >
             <SelectTrigger className="h-10 w-full sm:w-40">
-              <SelectValue />
+              <SelectValue>{item.typeName || "Select a type"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {typeOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                <SelectItem key={option.id} value={option.id}>
+                  {option.name}
                 </SelectItem>
               ))}
             </SelectContent>

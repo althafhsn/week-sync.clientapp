@@ -109,7 +109,9 @@ export function UserEditorCard({
               }
             >
               <SelectTrigger className="h-10 w-full">
-                <SelectValue />
+                <SelectValue>
+                  {roles.find((r) => r.id === draft.roleId)?.name ?? "Select a role"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {roles.map((r) => (

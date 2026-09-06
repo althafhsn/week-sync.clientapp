@@ -3,10 +3,6 @@ export type Role = "member" | "manager";
 export type ReportStatus =
   "draft" | "submitted" | "needs_correction" | "approved";
 
-export type TaskPriority = "low" | "medium" | "high" | "critical";
-export type TaskStatus =
-  "completed" | "in_progress" | "blocked" | "carried_over";
-
 export interface User {
   id: string;
   name: string;
@@ -37,21 +33,14 @@ export interface NextWeekTask {
   description: string;
 }
 
-export type AchievementType = "achievement" | "highlight";
-
-export interface AchievementEntry {
+// Backed by the real report-highlight-types lookup ({id, name, category}).
+// The id/name are denormalized onto the entry itself so display doesn't
+// need a network round trip; achievements vs blockers is just which
+// category of highlight-type the entry was created from.
+export interface HighlightEntry {
   id: string;
-  type: AchievementType;
-  description: string;
-  /** Only one entry in the list should be flagged as key at a time. */
-  isKey: boolean;
-}
-
-export type BlockerType = "blocker" | "challenge";
-
-export interface BlockerEntry {
-  id: string;
-  type: BlockerType;
+  reportHighlightTypeId: number;
+  typeName: string;
   description: string;
   /** Only one entry in the list should be flagged as key at a time. */
   isKey: boolean;
@@ -60,10 +49,12 @@ export interface BlockerEntry {
 export interface ReportTask {
   id: string;
   name: string;
-  priority: TaskPriority;
+  priorityTypeId: number;
+  priorityName: string;
   plannedPct: number;
   actualPct: number;
-  status: TaskStatus;
+  taskStatusId: number;
+  statusName: string;
   plannedHours: number;
   timeSpent: number;
   deliverable: string;
@@ -103,8 +94,8 @@ export interface WeeklyReport {
   status: ReportStatus;
   tasks: ReportTask[];
   nextWeekTasks: NextWeekTask[];
-  blockers: BlockerEntry[];
-  achievements: AchievementEntry[];
+  blockers: HighlightEntry[];
+  achievements: HighlightEntry[];
   hours: HoursByType;
   notes: string;
   links: string;
@@ -122,34 +113,10 @@ export const STATUS_LABEL: Record<ReportStatus, string> = {
   approved: "Approved",
 };
 
-export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
-  completed: "Completed",
-  in_progress: "In Progress",
-  blocked: "Blocked",
-  carried_over: "Carried Over",
-};
-
-export const PRIORITY_LABEL: Record<TaskPriority, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  critical: "Critical",
-};
-
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
   proposed: "Proposed",
   active: "Active",
   archived: "Archived",
-};
-
-export const ACHIEVEMENT_TYPE_LABEL: Record<AchievementType, string> = {
-  achievement: "Achievement",
-  highlight: "Highlight",
-};
-
-export const BLOCKER_TYPE_LABEL: Record<BlockerType, string> = {
-  blocker: "Blocker",
-  challenge: "Challenge",
 };
 
 export function totalHours(h: HoursByType) {

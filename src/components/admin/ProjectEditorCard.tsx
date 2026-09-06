@@ -109,7 +109,7 @@ export function ProjectEditorCard({
             }
           >
             <SelectTrigger className="h-10 w-full sm:w-56">
-              <SelectValue />
+              <SelectValue>{activeStatusName ?? "Select a status"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {statuses.map((s) => (
