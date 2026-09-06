@@ -1,6 +1,6 @@
 export interface ReportHighlight {
   id: string;
   reportVersionId: string;
-  reportHighlightTypeId: string;
+  reportHighlightTypeId: number;
   isKey: boolean;
 }

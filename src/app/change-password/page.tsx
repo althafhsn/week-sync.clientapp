@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { changePasswordWithApi } from "@/lib/api/auth-client";
 import { useStore } from "@/lib/store";
 
 export default function ChangePasswordPage() {
@@ -17,8 +18,10 @@ export default function ChangePasswordPage() {
   const { hydrated, signedIn, role, currentUser, changePassword, signOut } =
     useStore();
 
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const needsChange = hydrated && signedIn && !!currentUser?.mustChangePassword;
 
@@ -33,7 +36,7 @@ export default function ChangePasswordPage() {
     }
   }, [hydrated, signedIn, currentUser, role, router]);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (newPassword.length < 6) {
@@ -45,9 +48,19 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    changePassword(newPassword);
-    toast.success("Password updated.");
-    router.push(destinationFor(role));
+    setSubmitting(true);
+    try {
+      await changePasswordWithApi(currentPassword, newPassword);
+      changePassword(newPassword); // sync the local mirror so gating updates immediately
+      toast.success("Password updated.");
+      router.push(destinationFor(role));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not change your password."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (!needsChange) {
@@ -80,6 +93,20 @@ export default function ChangePasswordPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
+              <Label htmlFor="currentPassword">Current (temporary) password</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                required
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-1.5">
               <Label htmlFor="newPassword">New password</Label>
               <Input
                 id="newPassword"
@@ -107,8 +134,8 @@ export default function ChangePasswordPage() {
               />
             </div>
 
-            <Button type="submit" className="h-11 w-full">
-              Update password &amp; continue
+            <Button type="submit" className="h-11 w-full" disabled={submitting}>
+              {submitting ? "Updating…" : "Update password & continue"}
             </Button>
           </form>
 

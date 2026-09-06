@@ -1,5 +1,5 @@
 export interface CreateReportReviewActionRequest {
   reportVersionId: string;
-  reviewActionTypeId: string;
+  reviewActionTypeId: number;
   comments?: string;
 }

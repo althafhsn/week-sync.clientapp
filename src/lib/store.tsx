@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { MANAGER_ID, buildSeedReports, seedProjects, seedUsers } from "@/lib/demo-data";
+import { logoutOfApi } from "@/lib/api/auth-client";
 import type {
   ManagerFeedback,
   Project,
@@ -22,12 +23,31 @@ import type {
 
 const STORAGE_KEY = "weekly-review-hub-demo-v4";
 
+// Called from outside the React tree (the API fetch wrapper) when a real
+// backend session expires. Patches the persisted flag directly so a
+// subsequent load doesn't rehydrate a stale signedIn:true from localStorage
+// even though the httpOnly session cookie is already gone.
+export function forceLocalSignOut() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as Partial<StoreState>;
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...parsed, signedIn: false })
+    );
+  } catch {
+    // Corrupt or inaccessible storage — nothing to patch.
+  }
+}
+
 interface StoreState {
   users: User[];
   projects: Project[];
   reports: WeeklyReport[];
   role: Role;
   memberId: string;
+  managerId: string;
   signedIn: boolean;
 }
 
@@ -38,6 +58,7 @@ function initialState(): StoreState {
     reports: buildSeedReports(),
     role: "member",
     memberId: "u-nasra",
+    managerId: MANAGER_ID,
     signedIn: false,
   };
 }
@@ -71,6 +92,7 @@ function snapshotOf(report: WeeklyReport): Omit<WeeklyReport, "versions"> {
 interface StoreActions {
   setRole: (role: Role) => void;
   setMemberId: (id: string) => void;
+  setManagerId: (id: string) => void;
   signIn: (role: Role) => void;
   signOut: () => void;
   reset: () => void;
@@ -133,13 +155,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       setRole: (role) => setState((s) => ({ ...s, role })),
       setMemberId: (memberId) => setState((s) => ({ ...s, memberId })),
+      setManagerId: (managerId) => setState((s) => ({ ...s, managerId })),
       signIn: (role) => setState((s) => ({ ...s, role, signedIn: true })),
-      signOut: () => setState((s) => ({ ...s, signedIn: false })),
+      signOut: () => {
+        void logoutOfApi();
+        setState((s) => ({ ...s, signedIn: false }));
+      },
       reset: () =>
         setState((s) => ({
           ...initialState(),
           role: s.role,
           memberId: s.memberId,
+          managerId: s.managerId,
           signedIn: true,
         })),
 
@@ -259,7 +286,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       updateProfile: (patch) =>
         setState((s) => {
-          const activeId = s.role === "manager" ? MANAGER_ID : s.memberId;
+          const activeId = s.role === "manager" ? s.managerId : s.memberId;
           return {
             ...s,
             users: s.users.map((u) =>
@@ -270,7 +297,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       changePassword: (newPassword) =>
         setState((s) => {
-          const activeId = s.role === "manager" ? MANAGER_ID : s.memberId;
+          const activeId = s.role === "manager" ? s.managerId : s.memberId;
           return {
             ...s,
             users: s.users.map((u) =>
@@ -287,9 +314,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const currentUser = useMemo(
     () =>
       state.role === "manager"
-        ? state.users.find((u) => u.id === MANAGER_ID)
+        ? state.users.find((u) => u.id === state.managerId)
         : state.users.find((u) => u.id === state.memberId),
-    [state.role, state.memberId, state.users]
+    [state.role, state.memberId, state.managerId, state.users]
   );
 
   const members = useMemo(

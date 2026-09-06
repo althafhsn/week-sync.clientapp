@@ -1,8 +1,8 @@
 export interface CreateTaskRequest {
   reportVersionId: string;
   name: string;
-  priorityTypeId: string;
-  taskStatusId: string;
+  priorityTypeId: number;
+  taskStatusId: number;
   planned?: number;
   actual?: number;
   plannedHour?: number;

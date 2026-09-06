@@ -1,9 +1,7 @@
 import {
   PRIORITY_LABEL,
-  PROJECT_STATUS_LABEL,
   STATUS_LABEL,
   TASK_STATUS_LABEL,
-  type ProjectStatus,
   type ReportStatus,
   type TaskPriority,
   type TaskStatus,
@@ -73,7 +71,10 @@ const PRIORITY_CLASSES: Record<TaskPriority, string> = {
   critical: "bg-destructive/15 text-destructive dark:bg-destructive/25",
 };
 
-const PROJECT_STATUS_CLASSES: Record<ProjectStatus, string> = {
+// Keyed by lowercased status name so it works for any {id, name} lookup
+// row from the real API (e.g. "Proposed", "Active", "Archived"), not just
+// the demo string-union enum.
+const PROJECT_STATUS_CLASSES: Record<string, string> = {
   proposed: "bg-info/15 text-info dark:bg-info/25",
   active: "bg-success/15 text-success dark:bg-success/25",
   archived:
@@ -84,18 +85,19 @@ export function ProjectStatusBadge({
   status,
   className,
 }: {
-  status: ProjectStatus;
+  status: string;
   className?: string;
 }) {
   return (
     <span
       className={cn(
         "inline-flex h-6 w-fit shrink-0 items-center rounded-full px-2.5 text-xs font-medium whitespace-nowrap",
-        PROJECT_STATUS_CLASSES[status],
+        PROJECT_STATUS_CLASSES[status.toLowerCase()] ??
+          "bg-secondary text-secondary-foreground",
         className
       )}
     >
-      {PROJECT_STATUS_LABEL[status]}
+      {status}
     </span>
   );
 }

@@ -2,8 +2,8 @@ export interface Task {
   id: string;
   reportVersionId: string;
   name: string;
-  priorityTypeId: string;
-  taskStatusId: string;
+  priorityTypeId: number;
+  taskStatusId: number;
   planned: number | null;
   actual: number | null;
   plannedHour: number | null;

@@ -1,55 +1,76 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Briefcase, UserRound } from "lucide-react";
 
 import { destinationFor } from "@/components/auth/AuthGate";
 import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
-import { DemoAccountCard } from "@/components/auth/DemoAccountCard";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
-import { DEMO_PASSWORD, seedUsers } from "@/lib/demo-data";
-import type { User } from "@/lib/types";
+import { loginWithApi } from "@/lib/api/auth-client";
+import type { Role, User } from "@/lib/types";
 
-const DEMO_SHORTCUT_EMAILS = ["nasra@northwind.io", "dilani@northwind.io"];
-
-const demoAccounts = DEMO_SHORTCUT_EMAILS.map(
-  (email) => seedUsers.find((user) => user.email === email)!
-);
+const MANAGER_ROLE_NAME = "manager";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { users, setMemberId, signIn } = useStore();
+  const { setMemberId, setManagerId, upsertUser, signIn } = useStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSignIn(user: User) {
-    if (user.role === "member") {
-      setMemberId(user.id);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("reason") === "session_expired") {
+      toast.error("Your session has expired. Please sign in again.");
     }
-    signIn(user.role);
-    router.push(
-      user.mustChangePassword ? "/change-password" : destinationFor(user.role)
-    );
-  }
+  }, []);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const match = users.find(
-      (user) => user.email === email.trim().toLowerCase()
-    );
+    setSubmitting(true);
 
-    if (!match || match.password !== password) {
-      toast.error("Those credentials don't match an account.");
-      return;
+    try {
+      const apiUser = await loginWithApi(email.trim(), password);
+      const role: Role =
+        apiUser.role?.name.toLowerCase() === MANAGER_ROLE_NAME
+          ? "manager"
+          : "member";
+
+      const user: User = {
+        id: apiUser.id,
+        name: apiUser.name,
+        email: apiUser.email,
+        role,
+        title: apiUser.jobTitle ?? apiUser.role?.name ?? "",
+        team: "",
+        joinedAt: new Date().toISOString(),
+        password: "",
+        mustChangePassword: apiUser.mustChangePassword,
+      };
+
+      upsertUser(user);
+      if (role === "manager") {
+        setManagerId(user.id);
+      } else {
+        setMemberId(user.id);
+      }
+      signIn(role);
+      router.push(
+        user.mustChangePassword ? "/change-password" : destinationFor(role)
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Those credentials don't match an account."
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    handleSignIn(match);
   }
 
   return (
@@ -67,7 +88,7 @@ export default function LoginPage() {
               Sign in to Weekly Review Hub
             </h1>
             <p className="text-muted-foreground text-sm">
-              Welcome back. Enter your details or use a demo account below.
+              Welcome back. Enter your details to continue.
             </p>
           </div>
 
@@ -100,8 +121,8 @@ export default function LoginPage() {
               />
             </div>
 
-            <Button type="submit" className="h-11 w-full">
-              Sign in
+            <Button type="submit" className="h-11 w-full" disabled={submitting}>
+              {submitting ? "Signing in…" : "Sign in"}
             </Button>
           </form>
 
@@ -111,28 +132,6 @@ export default function LoginPage() {
               Create an account
             </a>
           </p>
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-border" />
-              <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                Or try a demo account
-              </span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-
-            {demoAccounts.map((user) => (
-              <DemoAccountCard
-                key={user.id}
-                icon={user.role === "manager" ? Briefcase : UserRound}
-                name={user.name}
-                blurb={`${user.title} · ${user.team}`}
-                email={user.email}
-                password={DEMO_PASSWORD}
-                onEnter={() => handleSignIn(user)}
-              />
-            ))}
-          </div>
         </div>
       </div>
     </div>

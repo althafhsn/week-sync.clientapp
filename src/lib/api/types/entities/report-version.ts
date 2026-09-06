@@ -7,7 +7,7 @@ import type { ReportReviewAction } from "./report-review-action";
 export interface ReportVersion {
   id: string;
   reportId: string;
-  reportStatusId: string;
+  reportStatusId: number;
   notes: string | null;
   startDate: string;
   endDate: string;

@@ -1,4 +1,4 @@
 export interface ReportHourType {
-  id: string;
+  id: number;
   name: string;
 }

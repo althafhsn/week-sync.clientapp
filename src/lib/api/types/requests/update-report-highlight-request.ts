@@ -1,4 +1,4 @@
 export interface UpdateReportHighlightRequest {
-  reportHighlightTypeId?: string;
+  reportHighlightTypeId?: number;
   isKey?: boolean;
 }

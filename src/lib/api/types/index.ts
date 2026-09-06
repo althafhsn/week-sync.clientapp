@@ -11,6 +11,7 @@
 
 export * from "./enums";
 export * from "./id-ref";
+export * from "./pagination";
 
 // Lookup entities (simple {id, name} tables)
 export * from "./lookups/role";
@@ -36,6 +37,9 @@ export * from "./entities/report-review-action";
 // Auth
 export * from "./auth/login-request";
 export * from "./auth/login-response";
+export * from "./auth/refresh-token-request";
+export * from "./auth/refresh-token-response";
+export * from "./auth/change-password-request";
 
 // Request DTOs
 export * from "./requests/create-user-request";

@@ -1,7 +1,7 @@
 export interface UpdateTaskRequest {
   name?: string;
-  priorityTypeId?: string;
-  taskStatusId?: string;
+  priorityTypeId?: number;
+  taskStatusId?: number;
   planned?: number;
   actual?: number;
   plannedHour?: number;

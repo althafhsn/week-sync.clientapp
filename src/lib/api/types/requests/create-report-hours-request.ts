@@ -1,5 +1,5 @@
 export interface CreateReportHoursRequest {
   reportVersionId: string;
-  reportHourTypeId: string;
+  reportHourTypeId: number;
   hours: number;
 }

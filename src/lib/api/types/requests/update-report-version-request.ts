@@ -1,5 +1,5 @@
 export interface UpdateReportVersionRequest {
-  reportStatusId?: string;
+  reportStatusId?: number;
   notes?: string;
   startDate?: string;
   endDate?: string;

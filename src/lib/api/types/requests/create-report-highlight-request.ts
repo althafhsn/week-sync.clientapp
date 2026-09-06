@@ -1,5 +1,5 @@
 export interface CreateReportHighlightRequest {
   reportVersionId: string;
-  reportHighlightTypeId: string;
+  reportHighlightTypeId: number;
   isKey?: boolean;
 }

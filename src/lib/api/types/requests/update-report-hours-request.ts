@@ -1,4 +1,4 @@
 export interface UpdateReportHoursRequest {
-  reportHourTypeId?: string;
+  reportHourTypeId?: number;
   hours?: number;
 }

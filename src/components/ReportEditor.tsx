@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
@@ -20,18 +20,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { emptyReport, weekLabel, weeks } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
+import { listProjects } from "@/lib/api/projects-client";
+import type { Project as ApiProject } from "@/lib/api/types";
 import {
   ACHIEVEMENT_TYPE_LABEL,
   BLOCKER_TYPE_LABEL,
   type AchievementType,
   type BlockerType,
   type HoursByType,
+  type Project,
   type ReportTask,
   type WeeklyReport,
 } from "@/lib/types";
+
+const ASSIGNED_PROJECTS_INCLUDE = ["users", "projectStatus"];
+
+// Mirrors a real backend project into the demo Project shape so the
+// existing lookups (report tables, review pages, etc.) that resolve
+// report.projectId against the demo store's projects list keep working
+// unchanged, the same trick used for the logged-in user at login time.
+function toDemoProject(project: ApiProject): Project {
+  return {
+    id: project.id,
+    name: project.name,
+    category: "",
+    description: project.description ?? "",
+    status: "active",
+    memberIds: (project.userProjects ?? []).map((up) => up.userId),
+  };
+}
 
 const ACHIEVEMENT_TYPE_OPTIONS = (
   Object.keys(ACHIEVEMENT_TYPE_LABEL) as AchievementType[]
@@ -64,20 +85,49 @@ function makeTask(): ReportTask {
 
 export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
   const router = useRouter();
-  const { currentUser, projects, saveReport, submitReport } = useStore();
+  const { currentUser, saveReport, submitReport, upsertProject } = useStore();
 
-  const assignedProjects = projects.filter(
-    (p) =>
-      p.status === "active" &&
-      currentUser &&
-      p.memberIds.includes(currentUser.id)
-  );
+  const [assignedProjects, setAssignedProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
 
   const [report, setReport] = useState<WeeklyReport>(() =>
     existing
       ? structuredClone(existing)
-      : emptyReport(currentUser?.id ?? "", assignedProjects[0]?.id ?? "")
+      : emptyReport(currentUser?.id ?? "", "")
   );
+
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+
+    listProjects(ASSIGNED_PROJECTS_INCLUDE, { userId: currentUser.id })
+      .then((realProjects) => {
+        if (cancelled) return;
+        const active = realProjects
+          .filter((p) => p.projectStatus?.name.toLowerCase() === "active")
+          .map(toDemoProject);
+        active.forEach(upsertProject);
+        setAssignedProjects(active);
+        if (!existing && active.length > 0) {
+          setReport((prev) =>
+            prev.projectId ? prev : { ...prev, projectId: active[0].id }
+          );
+        }
+      })
+      .catch((error) =>
+        toast.error(
+          error instanceof Error ? error.message : "Failed to load your projects."
+        )
+      )
+      .finally(() => {
+        if (!cancelled) setLoadingProjects(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
 
   const [weekMode, setWeekMode] = useState<"preset" | "custom">(() =>
     weeks.some((w) => w.start === report.weekStart && w.end === report.weekEnd)
@@ -231,7 +281,9 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
 
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Project</Label>
-            {assignedProjects.length === 0 ? (
+            {loadingProjects ? (
+              <Skeleton className="h-10 w-full rounded-lg" />
+            ) : assignedProjects.length === 0 ? (
               <p className="text-destructive text-sm">
                 You have no active assigned projects — ask your manager to
                 assign one before creating a report.
@@ -380,10 +432,16 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
           variant="outline"
           className="h-11"
           onClick={handleSaveDraft}
+          disabled={loadingProjects}
         >
           Save draft
         </Button>
-        <Button type="button" className="h-11" onClick={handleSubmit}>
+        <Button
+          type="button"
+          className="h-11"
+          onClick={handleSubmit}
+          disabled={loadingProjects}
+        >
           {wasNeedsCorrection ? "Resubmit for review" : "Submit for review"}
         </Button>
       </div>

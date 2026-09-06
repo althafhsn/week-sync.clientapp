@@ -1,4 +1,4 @@
 export interface PriorityType {
-  id: string;
+  id: number;
   name: string;
 }

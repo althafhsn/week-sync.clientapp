@@ -1,4 +1,4 @@
 export interface UpdateReportReviewActionRequest {
-  reviewActionTypeId?: string;
+  reviewActionTypeId?: number;
   comments?: string;
 }

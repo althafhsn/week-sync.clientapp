@@ -1,6 +1,6 @@
 export interface CreateReportVersionRequest {
   reportId: string;
-  reportStatusId: string;
+  reportStatusId: number;
   notes?: string;
   startDate: string; // "YYYY-MM-DD"
   endDate: string;

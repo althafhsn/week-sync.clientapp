@@ -1,7 +1,7 @@
 import type { ReportHighlightCategory } from "../enums";
 
 export interface ReportHighlightType {
-  id: string;
+  id: number;
   name: string;
   category: ReportHighlightCategory;
 }
