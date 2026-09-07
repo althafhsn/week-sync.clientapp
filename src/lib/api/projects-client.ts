@@ -1,10 +1,13 @@
 import { apiFetch } from "@/lib/api/client-fetch";
+import { cached, ENTITY_TTL_MS, invalidate } from "@/lib/api/request-cache";
 import type {
   CreateProjectRequest,
   PaginatedResult,
   Project,
   UpdateProjectRequest,
 } from "@/lib/api/types";
+
+const CACHE_PREFIX = "/api/projects";
 
 function includeQuery(include?: string[]) {
   return include?.length ? `?include=${include.join(",")}` : "";
@@ -26,20 +29,30 @@ export async function listProjects(
   include?: string[],
   filters?: ListProjectsFilters
 ): Promise<Project[]> {
-  const result = await apiFetch<PaginatedResult<Project>>(
-    `/api/projects${listProjectsQuery(include, filters)}`
+  const path = `${CACHE_PREFIX}${listProjectsQuery(include, filters)}`;
+  return cached(
+    path,
+    async () => {
+      const result = await apiFetch<PaginatedResult<Project>>(path);
+      return result.data;
+    },
+    ENTITY_TTL_MS
   );
-  return result.data;
 }
 
 export async function createProject(
   payload: CreateProjectRequest,
   include?: string[]
 ): Promise<Project> {
-  return apiFetch<Project>(`/api/projects${includeQuery(include)}`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  const project = await apiFetch<Project>(
+    `${CACHE_PREFIX}${includeQuery(include)}`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+  invalidate(CACHE_PREFIX);
+  return project;
 }
 
 export async function updateProject(
@@ -47,12 +60,18 @@ export async function updateProject(
   payload: UpdateProjectRequest,
   include?: string[]
 ): Promise<Project> {
-  return apiFetch<Project>(`/api/projects/${id}${includeQuery(include)}`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
+  const project = await apiFetch<Project>(
+    `${CACHE_PREFIX}/${id}${includeQuery(include)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+  invalidate(CACHE_PREFIX);
+  return project;
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  await apiFetch<null>(`/api/projects/${id}`, { method: "DELETE" });
+  await apiFetch<null>(`${CACHE_PREFIX}/${id}`, { method: "DELETE" });
+  invalidate(CACHE_PREFIX);
 }

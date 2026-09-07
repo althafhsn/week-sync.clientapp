@@ -1,20 +1,41 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { usePageHeader } from "@/components/AppShell";
 import { ReportEditor } from "@/components/ReportEditor";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { apiReportToWeeklyReport } from "@/lib/api/mappers";
+import { getReport } from "@/lib/api/reports-client";
 import { useStore } from "@/lib/store";
+import type { WeeklyReport } from "@/lib/types";
 
 export default function EditReportPage() {
   const { id } = useParams<{ id: string }>();
-  const { currentUser, reports } = useStore();
+  const { currentUser } = useStore();
+  const [report, setReport] = useState<WeeklyReport | null | undefined>(undefined);
 
-  const report = reports.find(
-    (r) => r.id === id && r.memberId === currentUser?.id
-  );
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+
+    getReport(id)
+      .then((r) => {
+        if (cancelled) return;
+        const mapped = apiReportToWeeklyReport(r);
+        setReport(mapped.memberId === currentUser.id ? mapped : null);
+      })
+      .catch(() => {
+        if (!cancelled) setReport(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, currentUser]);
 
   const editable =
     report && (report.status === "draft" || report.status === "needs_correction");
@@ -23,6 +44,15 @@ export default function EditReportPage() {
     title: "Edit report",
     description: report ? undefined : "Report not found",
   });
+
+  if (report === undefined) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-9 w-40 rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   if (!report) {
     return (

@@ -17,7 +17,7 @@ function errorMessage(error: unknown, fallback: string) {
 }
 
 export default function SettingsPage() {
-  const { currentUser, updateProfile, reset } = useStore();
+  const { currentUser, updateProfile } = useStore();
 
   usePageHeader({
     title: "Account settings",
@@ -72,11 +72,6 @@ export default function SettingsPage() {
     }
   }
 
-  function handleReset() {
-    reset();
-    toast.success("Demo data reset.");
-  }
-
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <Card>
@@ -121,26 +116,6 @@ export default function SettingsPage() {
               </Button>
             </>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Demo data</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-muted-foreground text-sm">
-            Reports, projects team assignments, and reviews in this app still
-            run on seeded demo data. Resetting restores the original seeded
-            state for those areas.
-          </p>
-          <Button
-            variant="outline"
-            className="h-10 w-full sm:w-auto"
-            onClick={handleReset}
-          >
-            Reset prototype data
-          </Button>
         </CardContent>
       </Card>
     </div>

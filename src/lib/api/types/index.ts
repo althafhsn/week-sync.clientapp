@@ -24,15 +24,15 @@ export * from "./lookups/report-hour-type";
 export * from "./lookups/report-highlight-type";
 
 // Core entities
+export * from "./entities/dashboard-summary";
 export * from "./entities/user";
 export * from "./entities/project";
 export * from "./entities/user-project";
 export * from "./entities/report";
-export * from "./entities/report-version";
+export * from "./entities/report-next-week-task";
 export * from "./entities/task";
 export * from "./entities/report-highlight";
 export * from "./entities/report-hours";
-export * from "./entities/report-review-action";
 
 // Auth
 export * from "./auth/login-request";
@@ -48,18 +48,13 @@ export * from "./requests/user-project-ref";
 export * from "./requests/create-project-request";
 export * from "./requests/update-project-request";
 export * from "./requests/create-user-project-request";
-export * from "./requests/create-report-request";
 export * from "./requests/update-report-request";
-export * from "./requests/create-report-version-request";
-export * from "./requests/update-report-version-request";
 export * from "./requests/create-task-request";
 export * from "./requests/update-task-request";
 export * from "./requests/create-report-highlight-request";
 export * from "./requests/update-report-highlight-request";
 export * from "./requests/create-report-hours-request";
 export * from "./requests/update-report-hours-request";
-export * from "./requests/create-report-review-action-request";
-export * from "./requests/update-report-review-action-request";
 export * from "./requests/create-lookup-request";
 export * from "./requests/update-lookup-request";
 export * from "./requests/create-report-highlight-type-request";
@@ -68,5 +63,4 @@ export * from "./requests/create-report-task-input";
 export * from "./requests/create-report-next-week-task-input";
 export * from "./requests/create-report-highlight-input";
 export * from "./requests/create-report-hours-input";
-export * from "./requests/create-report-version-input";
 export * from "./requests/create-report-with-version-request";

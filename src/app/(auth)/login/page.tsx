@@ -12,9 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
 import { loginWithApi } from "@/lib/api/auth-client";
-import type { Role, User } from "@/lib/types";
-
-const MANAGER_ROLE_NAME = "manager";
+import { apiUserToUser } from "@/lib/api/mappers";
+import type { Role } from "@/lib/types";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,22 +34,8 @@ export default function LoginPage() {
 
     try {
       const apiUser = await loginWithApi(email.trim(), password);
-      const role: Role =
-        apiUser.role?.name.toLowerCase() === MANAGER_ROLE_NAME
-          ? "manager"
-          : "member";
-
-      const user: User = {
-        id: apiUser.id,
-        name: apiUser.name,
-        email: apiUser.email,
-        role,
-        title: apiUser.jobTitle ?? apiUser.role?.name ?? "",
-        team: "",
-        joinedAt: new Date().toISOString(),
-        password: "",
-        mustChangePassword: apiUser.mustChangePassword,
-      };
+      const user = apiUserToUser(apiUser);
+      const role: Role = user.role;
 
       upsertUser(user);
       if (role === "manager") {

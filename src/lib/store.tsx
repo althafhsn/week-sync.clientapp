@@ -9,19 +9,17 @@ import {
   type ReactNode,
 } from "react";
 
-import { MANAGER_ID, buildSeedReports, seedProjects, seedUsers } from "@/lib/demo-data";
+import { apiUserToUser, apiProjectToProject, apiReportToWeeklyReport } from "@/lib/api/mappers";
 import { logoutOfApi } from "@/lib/api/auth-client";
-import type {
-  ManagerFeedback,
-  Project,
-  ReportStatus,
-  ReportVersion,
-  Role,
-  User,
-  WeeklyReport,
-} from "@/lib/types";
+import { clearRequestCache } from "@/lib/api/request-cache";
+import { listUsers } from "@/lib/api/users-client";
+import { listProjects } from "@/lib/api/projects-client";
+import { listReports } from "@/lib/api/reports-client";
+import { listReportStatuses } from "@/lib/api/report-statuses-client";
+import type { ReportStatus as ApiReportStatus } from "@/lib/api/types";
+import type { Project, Role, User, WeeklyReport } from "@/lib/types";
 
-const STORAGE_KEY = "weekly-review-hub-demo-v4";
+const STORAGE_KEY = "weekly-review-hub-v5";
 
 // Called from outside the React tree (the API fetch wrapper) when a real
 // backend session expires. Patches the persisted flag directly so a
@@ -31,7 +29,7 @@ export function forceLocalSignOut() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
-    const parsed = JSON.parse(raw) as Partial<StoreState>;
+    const parsed = JSON.parse(raw) as Partial<PersistedState>;
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ ...parsed, signedIn: false })
@@ -41,51 +39,35 @@ export function forceLocalSignOut() {
   }
 }
 
-interface StoreState {
-  users: User[];
-  projects: Project[];
-  reports: WeeklyReport[];
+// Only auth/session bookkeeping is persisted across reloads — users,
+// projects, reports and report statuses all come from the real backend and
+// are refetched on every load instead of being cached locally.
+interface PersistedState {
   role: Role;
   memberId: string;
   managerId: string;
   signedIn: boolean;
 }
 
+interface StoreState extends PersistedState {
+  users: User[];
+  projects: Project[];
+  reports: WeeklyReport[];
+  reportStatuses: ApiReportStatus[];
+  dataLoaded: boolean;
+}
+
 function initialState(): StoreState {
   return {
-    users: seedUsers,
-    projects: seedProjects,
-    reports: buildSeedReports(),
+    users: [],
+    projects: [],
+    reports: [],
+    reportStatuses: [],
     role: "member",
-    memberId: "u-nasra",
-    managerId: MANAGER_ID,
+    memberId: "",
+    managerId: "",
     signedIn: false,
-  };
-}
-
-function nextVersionNumber(versions: ReportVersion[]) {
-  return (versions[versions.length - 1]?.version ?? 0) + 1;
-}
-
-function snapshotOf(report: WeeklyReport): Omit<WeeklyReport, "versions"> {
-  return {
-    id: report.id,
-    memberId: report.memberId,
-    projectId: report.projectId,
-    weekStart: report.weekStart,
-    weekEnd: report.weekEnd,
-    status: report.status,
-    tasks: report.tasks,
-    nextWeekTasks: report.nextWeekTasks,
-    blockers: report.blockers,
-    achievements: report.achievements,
-    hours: report.hours,
-    notes: report.notes,
-    links: report.links,
-    feedback: report.feedback,
-    createdAt: report.createdAt,
-    updatedAt: report.updatedAt,
-    submittedAt: report.submittedAt,
+    dataLoaded: false,
   };
 }
 
@@ -95,14 +77,7 @@ interface StoreActions {
   setManagerId: (id: string) => void;
   signIn: (role: Role) => void;
   signOut: () => void;
-  reset: () => void;
-  saveReport: (report: WeeklyReport) => void;
-  submitReport: (id: string) => void;
-  reviewReport: (
-    id: string,
-    decision: "approved" | "changes_requested",
-    comment: string
-  ) => void;
+  upsertReport: (report: WeeklyReport) => void;
   upsertProject: (project: Project) => void;
   deleteProject: (id: string) => void;
   upsertUser: (user: User) => void;
@@ -130,26 +105,78 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as Partial<StoreState>;
+        const parsed = JSON.parse(raw) as Partial<PersistedState>;
         if (parsed && typeof parsed === "object") {
           // eslint-disable-next-line react-hooks/set-state-in-effect
           setState((prev) => ({ ...prev, ...parsed }));
         }
       }
     } catch {
-      // Corrupt or inaccessible storage — fall back to seed state.
+      // Corrupt or inaccessible storage — fall back to defaults.
     }
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
+    const persisted: PersistedState = {
+      role: state.role,
+      memberId: state.memberId,
+      managerId: state.managerId,
+      signedIn: state.signedIn,
+    };
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
     } catch {
       // Ignore write errors (e.g. private-mode storage quota).
     }
-  }, [state, hydrated]);
+  }, [state.role, state.memberId, state.managerId, state.signedIn, hydrated]);
+
+  // Loads real users, projects, report statuses, and reports from the
+  // backend once signed in. Members only see their own reports; managers
+  // see the whole team's, minus drafts — a draft is the member's own
+  // unpublished working copy and isn't visible to their manager until
+  // it's submitted.
+  useEffect(() => {
+    if (!hydrated || !state.signedIn) return;
+    const role = state.role;
+    const activeId = role === "manager" ? state.managerId : state.memberId;
+    if (!activeId) return;
+    let cancelled = false;
+
+    Promise.all([
+      listUsers(["role"]),
+      listProjects(["projectStatus", "users"]),
+      listReportStatuses(),
+      listReports(
+        undefined,
+        role === "manager" ? undefined : { userId: activeId }
+      ),
+    ])
+      .then(([users, projects, reportStatuses, reports]) => {
+        if (cancelled) return;
+        const mappedReports = reports.map(apiReportToWeeklyReport);
+        setState((prev) => ({
+          ...prev,
+          users: users.map(apiUserToUser),
+          projects: projects.map(apiProjectToProject),
+          reportStatuses,
+          reports:
+            role === "manager"
+              ? mappedReports.filter((r) => r.status !== "draft")
+              : mappedReports,
+          dataLoaded: true,
+        }));
+      })
+      .catch(() => {
+        // Leave existing state in place; pages that depend on this data
+        // show their own empty/error states.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, state.signedIn, state.role, state.memberId, state.managerId]);
 
   const actions = useMemo<StoreActions>(
     () => ({
@@ -159,101 +186,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       signIn: (role) => setState((s) => ({ ...s, role, signedIn: true })),
       signOut: () => {
         void logoutOfApi();
-        setState((s) => ({ ...s, signedIn: false }));
-      },
-      reset: () =>
+        clearRequestCache();
         setState((s) => ({
           ...initialState(),
           role: s.role,
-          memberId: s.memberId,
-          managerId: s.managerId,
-          signedIn: true,
-        })),
+          signedIn: false,
+        }));
+      },
 
-      saveReport: (report) =>
+      upsertReport: (report) =>
         setState((s) => {
-          const now = new Date().toISOString();
           const exists = s.reports.some((r) => r.id === report.id);
-          const versions =
-            report.versions.length > 0
-              ? report.versions
-              : [
-                  {
-                    version: 1,
-                    at: now,
-                    action: "Draft created",
-                    by: report.memberId,
-                  },
-                ];
-          const next: WeeklyReport = { ...report, versions, updatedAt: now };
           return {
             ...s,
             reports: exists
-              ? s.reports.map((r) => (r.id === report.id ? next : r))
-              : [...s.reports, next],
+              ? s.reports.map((r) => (r.id === report.id ? report : r))
+              : [...s.reports, report],
           };
         }),
-
-      submitReport: (id) =>
-        setState((s) => ({
-          ...s,
-          reports: s.reports.map((r) => {
-            if (r.id !== id) return r;
-            const now = new Date().toISOString();
-            const wasNeedsCorrection = r.status === "needs_correction";
-            const version: ReportVersion = {
-              version: nextVersionNumber(r.versions),
-              at: now,
-              action: wasNeedsCorrection
-                ? "Resubmitted after corrections"
-                : "Submitted for review",
-              by: r.memberId,
-              snapshot: snapshotOf(r),
-            };
-            return {
-              ...r,
-              status: "submitted" as ReportStatus,
-              submittedAt: now,
-              updatedAt: now,
-              versions: [...r.versions, version],
-            };
-          }),
-        })),
-
-      reviewReport: (id, decision, comment) =>
-        setState((s) => ({
-          ...s,
-          reports: s.reports.map((r) => {
-            if (r.id !== id) return r;
-            const now = new Date().toISOString();
-            const feedbackEntry: ManagerFeedback = {
-              id: `f-${Math.random().toString(36).slice(2, 9)}`,
-              managerId: MANAGER_ID,
-              at: now,
-              decision,
-              comment,
-            };
-            const version: ReportVersion = {
-              version: nextVersionNumber(r.versions),
-              at: now,
-              action:
-                decision === "approved"
-                  ? "Approved by manager"
-                  : "Changes requested by manager",
-              by: MANAGER_ID,
-              snapshot: snapshotOf(r),
-            };
-            return {
-              ...r,
-              status: (decision === "approved"
-                ? "approved"
-                : "needs_correction") as ReportStatus,
-              updatedAt: now,
-              feedback: [...r.feedback, feedbackEntry],
-              versions: [...r.versions, version],
-            };
-          }),
-        })),
 
       upsertProject: (project) =>
         setState((s) => {

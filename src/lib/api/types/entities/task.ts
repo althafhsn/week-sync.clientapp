@@ -1,6 +1,9 @@
+import type { PriorityType } from "../lookups/priority-type";
+import type { TaskStatus } from "../lookups/task-status";
+
 export interface Task {
   id: string;
-  reportVersionId: string;
+  reportId: string;
   name: string;
   priorityTypeId: number;
   taskStatusId: number;
@@ -9,4 +12,7 @@ export interface Task {
   plannedHour: number | null;
   actualHour: number | null;
   deliverable: string | null;
+  // present only when requested via ?include=
+  priorityType?: PriorityType;
+  taskStatus?: TaskStatus;
 }

@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api/client-fetch";
+import { cached, ENTITY_TTL_MS, invalidate } from "@/lib/api/request-cache";
 import type {
   CreateUserRequest,
   PaginatedResult,
@@ -6,29 +7,39 @@ import type {
   User,
 } from "@/lib/api/types";
 
+const CACHE_PREFIX = "/api/users";
+
 function includeQuery(include?: string[]) {
   return include?.length ? `?include=${include.join(",")}` : "";
 }
 
 export async function listUsers(include?: string[]): Promise<User[]> {
-  const result = await apiFetch<PaginatedResult<User>>(
-    `/api/users${includeQuery(include)}`
+  const path = `${CACHE_PREFIX}${includeQuery(include)}`;
+  return cached(
+    path,
+    async () => {
+      const result = await apiFetch<PaginatedResult<User>>(path);
+      return result.data;
+    },
+    ENTITY_TTL_MS
   );
-  return result.data;
 }
 
 export async function getUser(id: string, include?: string[]): Promise<User> {
-  return apiFetch<User>(`/api/users/${id}${includeQuery(include)}`);
+  const path = `${CACHE_PREFIX}/${id}${includeQuery(include)}`;
+  return cached(path, () => apiFetch<User>(path), ENTITY_TTL_MS);
 }
 
 export async function createUser(
   payload: CreateUserRequest,
   include?: string[]
 ): Promise<User> {
-  return apiFetch<User>(`/api/users${includeQuery(include)}`, {
+  const user = await apiFetch<User>(`${CACHE_PREFIX}${includeQuery(include)}`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
+  invalidate(CACHE_PREFIX);
+  return user;
 }
 
 export async function updateUser(
@@ -36,12 +47,18 @@ export async function updateUser(
   payload: UpdateUserRequest,
   include?: string[]
 ): Promise<User> {
-  return apiFetch<User>(`/api/users/${id}${includeQuery(include)}`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
+  const user = await apiFetch<User>(
+    `${CACHE_PREFIX}/${id}${includeQuery(include)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+  invalidate(CACHE_PREFIX);
+  return user;
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  await apiFetch<null>(`/api/users/${id}`, { method: "DELETE" });
+  await apiFetch<null>(`${CACHE_PREFIX}/${id}`, { method: "DELETE" });
+  invalidate(CACHE_PREFIX);
 }

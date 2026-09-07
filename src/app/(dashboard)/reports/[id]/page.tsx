@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -15,17 +16,39 @@ import {
 import { ReportWorkCard } from "@/components/report-detail/ReportWorkCard";
 import { VersionHistoryCard } from "@/components/report-detail/VersionHistoryCard";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { weekLabel } from "@/lib/demo-data";
+import { apiReportToWeeklyReport } from "@/lib/api/mappers";
+import { findReportStatusId } from "@/lib/api/report-status";
+import { getReport, updateReport } from "@/lib/api/reports-client";
 import { useLookups, useStore } from "@/lib/store";
+import type { WeeklyReport } from "@/lib/types";
 
 export default function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { currentUser, reports, submitReport } = useStore();
+  const { currentUser, reportStatuses, upsertReport } = useStore();
   const { projectName } = useLookups();
+  const [report, setReport] = useState<WeeklyReport | null | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
 
-  const report = reports.find(
-    (r) => r.id === id && r.memberId === currentUser?.id
-  );
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+
+    getReport(id)
+      .then((r) => {
+        if (cancelled) return;
+        const mapped = apiReportToWeeklyReport(r);
+        setReport(mapped.memberId === currentUser.id ? mapped : null);
+      })
+      .catch(() => {
+        if (!cancelled) setReport(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, currentUser]);
 
   usePageHeader({
     title: report ? weekLabel(report.weekStart, report.weekEnd) : "Report",
@@ -34,6 +57,15 @@ export default function ReportDetailPage() {
         ? `${projectName(report.projectId)} · ${currentUser.name}`
         : "Report not found",
   });
+
+  if (report === undefined) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-9 w-40 rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   if (!report) {
     return (
@@ -44,6 +76,29 @@ export default function ReportDetailPage() {
         </Button>
       </div>
     );
+  }
+
+  async function handleSubmit() {
+    if (!report || submitting) return;
+    const targetId = findReportStatusId(reportStatuses, "submitted");
+    if (!targetId) {
+      toast.error("Could not submit — try reloading the page.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const saved = await updateReport(report.id, { reportStatusId: targetId });
+      const mapped = apiReportToWeeklyReport(saved);
+      setReport(mapped);
+      upsertReport(mapped);
+      toast.success("Report submitted for review.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to submit the report."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -70,13 +125,11 @@ export default function ReportDetailPage() {
         {report.status === "draft" ? (
           <Button
             size="sm"
-            onClick={() => {
-              submitReport(report.id);
-              toast.success("Report submitted for review.");
-            }}
+            onClick={handleSubmit}
+            disabled={submitting}
             className="flex items-center gap-2 py-4"
           >
-            Submit
+            {submitting ? "Submitting…" : "Submit"}
           </Button>
         ) : null}
       </PageActions>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -15,20 +15,46 @@ import {
 import { ReportWorkCard } from "@/components/report-detail/ReportWorkCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { weekLabel } from "@/lib/demo-data";
+import { apiReportToWeeklyReport } from "@/lib/api/mappers";
+import { findReportStatusId } from "@/lib/api/report-status";
+import { getReport, updateReport } from "@/lib/api/reports-client";
 import { useLookups, useStore } from "@/lib/store";
+import type { WeeklyReport } from "@/lib/types";
 
 const DEFAULT_APPROVAL_COMMENT =
   "Clear report — looks good, no changes needed.";
 
 export default function ReviewReportPage() {
   const { id } = useParams<{ id: string }>();
-  const { reports, reviewReport } = useStore();
+  const { reportStatuses, upsertReport } = useStore();
   const { userName, projectName } = useLookups();
+  const [report, setReport] = useState<WeeklyReport | null | undefined>(undefined);
   const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const report = reports.find((r) => r.id === id);
+  useEffect(() => {
+    let cancelled = false;
+
+    getReport(id)
+      .then((r) => {
+        if (cancelled) return;
+        const mapped = apiReportToWeeklyReport(r);
+        // Drafts are the member's own unpublished working copy — a manager
+        // can't view or review one, even by guessing/bookmarking its URL.
+        setReport(mapped.status === "draft" ? null : mapped);
+      })
+      .catch(() => {
+        if (!cancelled) setReport(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
   const isSubmitted = report?.status === "submitted";
 
   usePageHeader({
@@ -37,6 +63,15 @@ export default function ReviewReportPage() {
       ? `${userName(report.memberId)} · ${weekLabel(report.weekStart, report.weekEnd)} · ${projectName(report.projectId)}`
       : "Report not found",
   });
+
+  if (report === undefined) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-9 w-40 rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   if (!report) {
     return (
@@ -49,20 +84,41 @@ export default function ReviewReportPage() {
     );
   }
 
-  function handleDecision(decision: "approved" | "changes_requested") {
+  async function handleDecision(decision: "approved" | "changes_requested") {
+    if (!report || submitting) return;
     if (decision === "changes_requested" && !comment.trim()) {
       toast.error("Add a comment explaining what needs to change.");
       return;
     }
-    reviewReport(
-      report!.id,
-      decision,
-      comment.trim() || DEFAULT_APPROVAL_COMMENT
+    const targetId = findReportStatusId(
+      reportStatuses,
+      decision === "approved" ? "approved" : "needs_correction"
     );
-    toast.success(
-      decision === "approved" ? "Report approved." : "Changes requested."
-    );
-    setComment("");
+    if (!targetId) {
+      toast.error("Could not submit the review — try reloading the page.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const saved = await updateReport(report.id, {
+        reportStatusId: targetId,
+        comment: comment.trim() || DEFAULT_APPROVAL_COMMENT,
+      });
+      const mapped = apiReportToWeeklyReport(saved);
+      setReport(mapped);
+      upsertReport(mapped);
+      toast.success(
+        decision === "approved" ? "Report approved." : "Changes requested."
+      );
+      setComment("");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to submit the review."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -103,13 +159,13 @@ export default function ReviewReportPage() {
                 placeholder="Leave a comment for the team member…"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                disabled={!isSubmitted}
+                disabled={!isSubmitted || submitting}
               />
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
                   className="bg-success text-success-foreground hover:bg-success/85 flex-1"
-                  disabled={!isSubmitted}
+                  disabled={!isSubmitted || submitting}
                   onClick={() => handleDecision("approved")}
                 >
                   Approve report
@@ -118,7 +174,7 @@ export default function ReviewReportPage() {
                   type="button"
                   variant="outline"
                   className="flex-1"
-                  disabled={!isSubmitted}
+                  disabled={!isSubmitted || submitting}
                   onClick={() => handleDecision("changes_requested")}
                 >
                   Request corrections

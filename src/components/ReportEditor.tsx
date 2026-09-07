@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { emptyReport, weekLabel, weeks } from "@/lib/demo-data";
+import { emptyReport } from "@/lib/demo-data";
+import { apiProjectToProject, apiReportToWeeklyReport } from "@/lib/api/mappers";
 import { useStore } from "@/lib/store";
 import { listProjects } from "@/lib/api/projects-client";
 import { listPriorityTypes } from "@/lib/api/priority-types-client";
@@ -30,41 +31,25 @@ import { listTaskStatuses } from "@/lib/api/task-statuses-client";
 import { listReportHighlightTypes } from "@/lib/api/report-highlight-types-client";
 import { listReportHourTypes } from "@/lib/api/report-hour-types-client";
 import { listReportStatuses } from "@/lib/api/report-statuses-client";
-import { createReportWithVersion } from "@/lib/api/reports-client";
+import { createReportWithVersion, updateReport } from "@/lib/api/reports-client";
 import type {
   CreateReportHoursInput,
   CreateReportWithVersionRequest,
-  Project as ApiProject,
   PriorityType,
   ReportHighlightType,
   ReportHourType,
   ReportStatus as ApiReportStatus,
   TaskStatus as ApiTaskStatus,
+  UpdateReportRequest,
 } from "@/lib/api/types";
 import type {
   HighlightEntry,
   HoursByType,
-  Project,
   ReportTask,
   WeeklyReport,
 } from "@/lib/types";
 
 const ASSIGNED_PROJECTS_INCLUDE = ["users", "projectStatus"];
-
-// Mirrors a real backend project into the demo Project shape so the
-// existing lookups (report tables, review pages, etc.) that resolve
-// report.projectId against the demo store's projects list keep working
-// unchanged, the same trick used for the logged-in user at login time.
-function toDemoProject(project: ApiProject): Project {
-  return {
-    id: project.id,
-    name: project.name,
-    category: "",
-    description: project.description ?? "",
-    status: "active",
-    memberIds: (project.userProjects ?? []).map((up) => up.userId),
-  };
-}
 
 const HOUR_FIELDS: Array<{
   key: keyof HoursByType;
@@ -115,9 +100,11 @@ function makeHighlightEntry(
 
 export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
   const router = useRouter();
-  const { currentUser, saveReport, submitReport, upsertProject } = useStore();
+  const { currentUser, upsertReport, upsertProject } = useStore();
 
-  const [assignedProjects, setAssignedProjects] = useState<Project[]>([]);
+  const [assignedProjects, setAssignedProjects] = useState<
+    ReturnType<typeof apiProjectToProject>[]
+  >([]);
   const [priorityTypes, setPriorityTypes] = useState<PriorityType[]>([]);
   const [taskStatuses, setTaskStatuses] = useState<ApiTaskStatus[]>([]);
   const [highlightTypes, setHighlightTypes] = useState<ReportHighlightType[]>([]);
@@ -151,7 +138,7 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
         if (cancelled) return;
         const active = realProjects
           .filter((p) => p.projectStatus?.name.toLowerCase() === "active")
-          .map(toDemoProject);
+          .map(apiProjectToProject);
         active.forEach(upsertProject);
         setAssignedProjects(active);
         setPriorityTypes(priorities);
@@ -181,12 +168,6 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
-
-  const [weekMode, setWeekMode] = useState<"preset" | "custom">(() =>
-    weeks.some((w) => w.start === report.weekStart && w.end === report.weekEnd)
-      ? "preset"
-      : "custom"
-  );
 
   const wasNeedsCorrection = existing?.status === "needs_correction";
 
@@ -240,14 +221,18 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
     return true;
   }
 
-  // Builds the real backend's nested create payload from the current local
-  // report state. Only meaningful for a brand-new report — there's no
-  // confirmed "update" endpoint yet, so editing/resubmitting an existing
-  // report (see the `existing` guard at each call site) stays local-only
-  // for now rather than risk creating a duplicate report on the backend.
-  function buildCreatePayload(statusName: string): CreateReportWithVersionRequest | null {
+  // Builds the real backend's nested payload fields from the current local
+  // report state, shared between create (wrapped with userId/projectId) and
+  // update (sent as-is against the existing report's id).
+  function buildVersionFields(
+    statusName: string
+  ): (UpdateReportRequest & {
+    reportStatusId: number;
+    startDate: string;
+    endDate: string;
+  }) | null {
     const status = reportStatuses.find((s) => s.name === statusName);
-    if (!currentUser || !status) return null;
+    if (!status) return null;
 
     const hours: CreateReportHoursInput[] = HOUR_FIELDS.map((field) => {
       const hourType = reportHourTypes.find((t) => t.name === field.realName);
@@ -255,89 +240,82 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
     }).filter((h) => h.reportHourTypeId !== 0);
 
     return {
+      reportStatusId: status.id,
+      notes: report.notes || undefined,
+      startDate: report.weekStart,
+      endDate: report.weekEnd,
+      links: report.links || undefined,
+      tasks: report.tasks.map((t) => ({
+        name: t.name,
+        priorityTypeId: t.priorityTypeId,
+        taskStatusId: t.taskStatusId,
+        planned: t.plannedPct,
+        actual: t.actualPct,
+        plannedHour: t.plannedHours,
+        actualHour: t.timeSpent,
+        deliverable: t.deliverable || undefined,
+      })),
+      reportNextWeekTasks: report.nextWeekTasks
+        .filter((t) => t.description.trim())
+        .map((t) => ({ description: t.description })),
+      reportHighlights: [...report.achievements, ...report.blockers].map((e) => ({
+        reportHighlightTypeId: e.reportHighlightTypeId,
+        description: e.description || undefined,
+        isKey: e.isKey,
+      })),
+      reportHours: hours,
+    };
+  }
+
+  async function saveWithStatus(statusName: string) {
+    const fields = buildVersionFields(statusName);
+    if (!fields || !currentUser) {
+      toast.error("Could not prepare the report — try reloading the page.");
+      return null;
+    }
+
+    const payload: CreateReportWithVersionRequest = {
       userId: currentUser.id,
       projectId: report.projectId,
-      version: {
-        reportStatusId: status.id,
-        notes: report.notes || undefined,
-        startDate: report.weekStart,
-        endDate: report.weekEnd,
-        links: report.links || undefined,
-        tasks: report.tasks.map((t) => ({
-          name: t.name,
-          priorityTypeId: t.priorityTypeId,
-          taskStatusId: t.taskStatusId,
-          planned: t.plannedPct,
-          actual: t.actualPct,
-          plannedHour: t.plannedHours,
-          actualHour: t.timeSpent,
-          deliverable: t.deliverable || undefined,
-        })),
-        nextWeekTasks: report.nextWeekTasks
-          .filter((t) => t.description.trim())
-          .map((t) => ({ description: t.description })),
-        highlights: [...report.achievements, ...report.blockers].map((e) => ({
-          reportHighlightTypeId: e.reportHighlightTypeId,
-          isKey: e.isKey,
-        })),
-        hours,
-      },
+      ...fields,
+      tasks: fields.tasks ?? [],
+      reportNextWeekTasks: fields.reportNextWeekTasks ?? [],
+      reportHighlights: fields.reportHighlights ?? [],
+      reportHours: fields.reportHours ?? [],
     };
+
+    setSubmitting(true);
+    try {
+      const saved = existing
+        ? await updateReport(existing.id, fields)
+        : await createReportWithVersion(payload);
+      const mapped = apiReportToWeeklyReport(saved);
+      upsertReport(mapped);
+      return mapped;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save the report.");
+      return null;
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleSaveDraft() {
     if (!validate() || submitting) return;
-
-    if (!existing) {
-      const payload = buildCreatePayload("Draft");
-      if (!payload) {
-        toast.error("Could not prepare the report — try reloading the page.");
-        return;
-      }
-      setSubmitting(true);
-      try {
-        await createReportWithVersion(payload);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to save the report.");
-        setSubmitting(false);
-        return;
-      }
-      setSubmitting(false);
-    }
-
-    saveReport(report);
+    const saved = await saveWithStatus("Draft");
+    if (!saved) return;
     toast.success("Draft saved.");
-    router.push(`/reports/${report.id}`);
+    router.push(`/reports/${saved.id}`);
   }
 
   async function handleSubmit() {
     if (!validate() || submitting) return;
-
-    if (!existing) {
-      const payload = buildCreatePayload("Submitted");
-      if (!payload) {
-        toast.error("Could not prepare the report — try reloading the page.");
-        return;
-      }
-      setSubmitting(true);
-      try {
-        await createReportWithVersion(payload);
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to submit the report."
-        );
-        setSubmitting(false);
-        return;
-      }
-      setSubmitting(false);
-    }
-
-    saveReport(report);
-    submitReport(report.id);
+    const saved = await saveWithStatus("Submitted");
+    if (!saved) return;
     toast.success(
       wasNeedsCorrection ? "Report resubmitted for review." : "Report submitted for review."
     );
-    router.push(`/reports/${report.id}`);
+    router.push(`/reports/${saved.id}`);
   }
 
   return (
@@ -349,76 +327,24 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Reporting period</Label>
-            <div className="bg-muted flex h-10 w-full items-center gap-1 rounded-lg p-1 sm:max-w-xs">
-              <Button
-                type="button"
-                size="sm"
-                variant={weekMode === "preset" ? "default" : "ghost"}
-                className="h-8 flex-1"
-                onClick={() => setWeekMode("preset")}
-              >
-                Preset week
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={weekMode === "custom" ? "default" : "ghost"}
-                className="h-8 flex-1"
-                onClick={() => setWeekMode("custom")}
-              >
-                Custom date range
-              </Button>
-            </div>
           </div>
 
-          {weekMode === "preset" ? (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>Week</Label>
-              <Select
-                items={weeks.map((w) => ({
-                  value: w.start,
-                  label: weekLabel(w.start, w.end),
-                }))}
-                value={report.weekStart}
-                onValueChange={(value) => {
-                  const week = weeks.find((w) => w.start === value);
-                  if (week) patch({ weekStart: week.start, weekEnd: week.end });
-                }}
-              >
-                <SelectTrigger className="h-10 w-full">
-                  <SelectValue>
-                    {weekLabel(report.weekStart, report.weekEnd)}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {weeks.map((w) => (
-                    <SelectItem key={w.start} value={w.start}>
-                      {weekLabel(w.start, w.end)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-1.5">
-                <Label>Week start</Label>
-                <DateField
-                  value={report.weekStart}
-                  onChange={(weekStart) => patch({ weekStart })}
-                />
-              </div>
+          <div className="space-y-1.5">
+            <Label>Week start</Label>
+            <DateField
+              value={report.weekStart}
+              onChange={(weekStart) => patch({ weekStart })}
+            />
+          </div>
 
-              <div className="space-y-1.5">
-                <Label>Week end</Label>
-                <DateField
-                  value={report.weekEnd}
-                  minDate={report.weekStart}
-                  onChange={(weekEnd) => patch({ weekEnd })}
-                />
-              </div>
-            </>
-          )}
+          <div className="space-y-1.5">
+            <Label>Week end</Label>
+            <DateField
+              value={report.weekEnd}
+              minDate={report.weekStart}
+              onChange={(weekEnd) => patch({ weekEnd })}
+            />
+          </div>
 
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Project</Label>

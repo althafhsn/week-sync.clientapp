@@ -29,14 +29,15 @@ function routeMatchesRole(pathname: string, role: Role) {
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { hydrated, signedIn, role, currentUser } = useStore();
+  const { hydrated, signedIn, dataLoaded, role, currentUser } = useStore();
+  const ready = hydrated && (!signedIn || dataLoaded);
 
-  const mustChangePassword = hydrated && signedIn && !!currentUser?.mustChangePassword;
+  const mustChangePassword = ready && signedIn && !!currentUser?.mustChangePassword;
   const roleMismatch =
-    hydrated && signedIn && !mustChangePassword && !routeMatchesRole(pathname, role);
+    ready && signedIn && !mustChangePassword && !routeMatchesRole(pathname, role);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!ready) return;
     if (!signedIn) {
       router.replace("/login");
       return;
@@ -48,9 +49,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (roleMismatch) {
       router.replace(destinationFor(role));
     }
-  }, [hydrated, signedIn, mustChangePassword, roleMismatch, role, router]);
+  }, [ready, signedIn, mustChangePassword, roleMismatch, role, router]);
 
-  if (!hydrated) {
+  if (!ready) {
     return (
       <div className="flex min-h-svh items-center justify-center text-muted-foreground text-sm">
         Loading your workspace…
