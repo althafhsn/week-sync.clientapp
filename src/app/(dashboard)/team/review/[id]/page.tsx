@@ -13,16 +13,17 @@ import {
   NextWeekCard,
 } from "@/components/report-detail/ReportNarrativeCards";
 import { ReportWorkCard } from "@/components/report-detail/ReportWorkCard";
+import { VersionHistoryCard } from "@/components/report-detail/VersionHistoryCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { weekLabel } from "@/lib/demo-data";
-import { apiReportToWeeklyReport } from "@/lib/api/mappers";
+import { apiReportHistoryEntryToVersion, apiReportToWeeklyReport } from "@/lib/api/mappers";
 import { findReportStatusId } from "@/lib/api/report-status";
-import { getReport, updateReport } from "@/lib/api/reports-client";
+import { getReport, getReportHistory, updateReport } from "@/lib/api/reports-client";
 import { useLookups, useStore } from "@/lib/store";
-import type { WeeklyReport } from "@/lib/types";
+import type { ReportVersion, WeeklyReport } from "@/lib/types";
 
 const DEFAULT_APPROVAL_COMMENT =
   "Clear report — looks good, no changes needed.";
@@ -32,6 +33,7 @@ export default function ReviewReportPage() {
   const { reportStatuses, upsertReport } = useStore();
   const { userName, projectName } = useLookups();
   const [report, setReport] = useState<WeeklyReport | null | undefined>(undefined);
+  const [versions, setVersions] = useState<ReportVersion[]>([]);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,6 +50,14 @@ export default function ReviewReportPage() {
       })
       .catch(() => {
         if (!cancelled) setReport(null);
+      });
+
+    getReportHistory(id)
+      .then((entries) => {
+        if (!cancelled) setVersions(entries.map(apiReportHistoryEntryToVersion));
+      })
+      .catch(() => {
+        // Non-critical — the card just shows "No history yet." on failure.
       });
 
     return () => {
@@ -182,6 +192,13 @@ export default function ReviewReportPage() {
               </div>
             </CardContent>
           </Card>
+
+          <VersionHistoryCard
+            reportId={report.id}
+            versions={versions}
+            approved={report.status === "approved"}
+            submittedBy={userName(report.memberId)}
+          />
         </div>
       </div>
     </div>

@@ -29,6 +29,7 @@ export * from "./entities/user";
 export * from "./entities/project";
 export * from "./entities/user-project";
 export * from "./entities/report";
+export * from "./entities/report-history";
 export * from "./entities/report-next-week-task";
 export * from "./entities/task";
 export * from "./entities/report-highlight";

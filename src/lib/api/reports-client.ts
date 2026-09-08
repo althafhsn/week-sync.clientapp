@@ -4,6 +4,8 @@ import type {
   CreateReportWithVersionRequest,
   PaginatedResult,
   Report,
+  ReportHistoryDetail,
+  ReportHistoryEntry,
   UpdateReportRequest,
 } from "@/lib/api/types";
 
@@ -93,5 +95,32 @@ export async function updateReport(
     }
   );
   invalidate(CACHE_PREFIX);
+  invalidate(`${CACHE_PREFIX}/${id}/history`);
   return report;
+}
+
+// Past versions are only created when an edit lands while the report is
+// "Needs Correction" (see report.service.ts#archiveIfNeedsCorrection on the
+// backend), so this list is usually short — pull it in full rather than
+// paginating in the UI.
+export async function getReportHistory(id: string): Promise<ReportHistoryEntry[]> {
+  const path = `${CACHE_PREFIX}/${id}/history`;
+  return cached(
+    path,
+    async () => {
+      const result = await apiFetch<PaginatedResult<ReportHistoryEntry>>(
+        `${path}?pageSize=100`
+      );
+      return result.data;
+    },
+    ENTITY_TTL_MS
+  );
+}
+
+export async function getReportHistoryEntry(
+  id: string,
+  historyId: string
+): Promise<ReportHistoryDetail> {
+  const path = `${CACHE_PREFIX}/${id}/history/${historyId}`;
+  return cached(path, () => apiFetch<ReportHistoryDetail>(path), ENTITY_TTL_MS);
 }

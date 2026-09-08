@@ -18,17 +18,18 @@ import { VersionHistoryCard } from "@/components/report-detail/VersionHistoryCar
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { weekLabel } from "@/lib/demo-data";
-import { apiReportToWeeklyReport } from "@/lib/api/mappers";
+import { apiReportHistoryEntryToVersion, apiReportToWeeklyReport } from "@/lib/api/mappers";
 import { findReportStatusId } from "@/lib/api/report-status";
-import { getReport, updateReport } from "@/lib/api/reports-client";
+import { getReport, getReportHistory, updateReport } from "@/lib/api/reports-client";
 import { useLookups, useStore } from "@/lib/store";
-import type { WeeklyReport } from "@/lib/types";
+import type { ReportVersion, WeeklyReport } from "@/lib/types";
 
 export default function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { currentUser, reportStatuses, upsertReport } = useStore();
   const { projectName } = useLookups();
   const [report, setReport] = useState<WeeklyReport | null | undefined>(undefined);
+  const [versions, setVersions] = useState<ReportVersion[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -43,6 +44,14 @@ export default function ReportDetailPage() {
       })
       .catch(() => {
         if (!cancelled) setReport(null);
+      });
+
+    getReportHistory(id)
+      .then((entries) => {
+        if (!cancelled) setVersions(entries.map(apiReportHistoryEntryToVersion));
+      })
+      .catch(() => {
+        // Non-critical — the card just shows "No history yet." on failure.
       });
 
     return () => {
@@ -104,14 +113,6 @@ export default function ReportDetailPage() {
   return (
     <div className="space-y-6">
       <PageActions>
-        <Button
-          size="sm"
-          variant="outline"
-          render={<Link href="/reports" />}
-          className="flex items-center gap-2 py-4"
-        >
-          History
-        </Button>
         {report.status === "draft" || report.status === "needs_correction" ? (
           <Button
             size="sm"
@@ -145,8 +146,10 @@ export default function ReportDetailPage() {
           <EffortSummaryCard hours={report.hours} />
           <FeedbackCard feedback={report.feedback} />
           <VersionHistoryCard
-            versions={report.versions}
+            reportId={report.id}
+            versions={versions}
             approved={report.status === "approved"}
+            submittedBy={currentUser?.name}
           />
         </div>
       </div>

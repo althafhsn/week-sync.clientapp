@@ -67,14 +67,35 @@ export interface HoursByType {
   documentation: number;
 }
 
+export interface ReportVersionSnapshot {
+  tasks: ReportTask[];
+  nextWeekTasks: NextWeekTask[];
+  achievements: HighlightEntry[];
+  blockers: HighlightEntry[];
+  hours: HoursByType;
+  notes: string;
+  links: string;
+}
+
 export interface ReportVersion {
+  /** Backend history-entry id, used to fetch the full snapshot on demand. */
+  id?: string;
   version: number;
+  /** When the manager's review left this version archived (superseded by an edit). */
   at: string;
   action: string;
-  by: string;
+  /** Who made the change — omitted where the backend doesn't track it. */
+  by?: string;
   note?: string;
-  /** Immutable report data captured at this workflow step. */
-  snapshot?: Omit<WeeklyReport, "versions">;
+  /** When this version was originally submitted, before it was reviewed. */
+  submittedAt?: string;
+  weekStart?: string;
+  weekEnd?: string;
+  notes?: string;
+  links?: string;
+  /** Immutable report content captured at this workflow step. Fetched on
+   * demand, so absent until the version has been expanded. */
+  snapshot?: ReportVersionSnapshot;
 }
 
 export interface ManagerFeedback {
