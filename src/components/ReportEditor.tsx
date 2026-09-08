@@ -12,6 +12,7 @@ import { TaskRow } from "@/components/report-editor/TaskRow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -469,13 +470,10 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
                   <Label className="text-muted-foreground text-xs font-normal">
                     {field.label}
                   </Label>
-                  <Input
-                    type="number"
+                  <NumberField
                     min={0}
                     value={report.hours[field.key]}
-                    onChange={(e) =>
-                      patchHours(field.key, Number(e.target.value))
-                    }
+                    onChange={(value) => patchHours(field.key, value)}
                     className="h-10"
                   />
                 </div>

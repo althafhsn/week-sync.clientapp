@@ -9,8 +9,10 @@ import { PageActions } from "@/components/PageActions";
 import { UserEditorCard, type UserDraft } from "@/components/admin/UserEditorCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateTempPassword } from "@/lib/password";
+import { usePagination } from "@/lib/use-pagination";
 import { listRoles } from "@/lib/api/roles-client";
 import { listUserStatuses } from "@/lib/api/user-statuses-client";
 import { listTeams } from "@/lib/api/teams-client";
@@ -99,6 +101,8 @@ export default function UsersPage() {
     title: "Users",
     description: "Invite team members and managers, and assign roles.",
   });
+
+  const { page, setPage, pageCount, pageItems: pagedUsers } = usePagination(users, 9);
 
   useEffect(() => {
     let cancelled = false;
@@ -259,7 +263,7 @@ export default function UsersPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <UserCardSkeleton key={i} />)
-          : users.map((user) => {
+          : pagedUsers.map((user) => {
               const isPending = user.userStatus?.name === PENDING_APPROVAL;
               const userTeam = teams.find((t) =>
                 (t.teamMembers ?? []).some((tm) => tm.userId === user.id)
@@ -334,6 +338,10 @@ export default function UsersPage() {
               );
             })}
       </div>
+
+      {!loading ? (
+        <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+      ) : null}
     </div>
   );
 }

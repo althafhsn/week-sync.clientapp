@@ -9,7 +9,9 @@ import { PageActions } from "@/components/PageActions";
 import { TeamEditorCard, type TeamDraft } from "@/components/admin/TeamEditorCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePagination } from "@/lib/use-pagination";
 import {
   createTeam,
   deleteTeam,
@@ -69,6 +71,8 @@ export default function TeamsPage() {
     title: "Teams",
     description: "Group users into teams and share project access across them.",
   });
+
+  const { page, setPage, pageCount, pageItems: pagedTeams } = usePagination(teams, 9);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,7 +156,7 @@ export default function TeamsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <TeamCardSkeleton key={i} />)
-          : teams.map((team) => {
+          : pagedTeams.map((team) => {
               const memberCount = team.teamMembers?.length ?? 0;
               return (
                 <Card key={team.id}>
@@ -185,6 +189,10 @@ export default function TeamsPage() {
               );
             })}
       </div>
+
+      {!loading ? (
+        <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+      ) : null}
     </div>
   );
 }

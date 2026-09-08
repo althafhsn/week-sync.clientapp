@@ -13,7 +13,9 @@ import {
 import { ProjectStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePagination } from "@/lib/use-pagination";
 import {
   createProject,
   deleteProject,
@@ -88,6 +90,8 @@ export default function ProjectsPage() {
     title: "Projects",
     description: "Manage the projects and categories teams report against.",
   });
+
+  const { page, setPage, pageCount, pageItems: pagedProjects } = usePagination(projects, 8);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,7 +194,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {projects.map((project) => {
+          {pagedProjects.map((project) => {
             const memberCount = project.userProjects?.length ?? 0;
             return (
               <Card key={project.id}>
@@ -234,6 +238,10 @@ export default function ProjectsPage() {
           })}
         </div>
       )}
+
+      {!loading ? (
+        <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+      ) : null}
     </div>
   );
 }

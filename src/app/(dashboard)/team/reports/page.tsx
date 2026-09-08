@@ -5,8 +5,10 @@ import { useMemo, useState } from "react";
 import { usePageHeader } from "@/components/AppShell";
 import { FilterBar, type FilterConfig } from "@/components/FilterBar";
 import { ReportTable } from "@/components/ReportTable";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { weekLabel } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
+import { usePagination } from "@/lib/use-pagination";
 import { STATUS_LABEL, type ReportStatus } from "@/lib/types";
 
 export default function TeamReportsPage() {
@@ -51,6 +53,8 @@ export default function TeamReportsPage() {
       })
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [reports, memberId, projectId, status, week, search, members, projects]);
+
+  const { page, setPage, pageCount, pageItems: pagedReports } = usePagination(filtered, 10);
 
   const filters: FilterConfig[] = [
     {
@@ -107,7 +111,8 @@ export default function TeamReportsPage() {
       <p className="text-muted-foreground text-sm">
         {filtered.length} report{filtered.length === 1 ? "" : "s"} found
       </p>
-      <ReportTable reports={filtered} mode="manager" showMember />
+      <ReportTable reports={pagedReports} mode="manager" showMember />
+      <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }

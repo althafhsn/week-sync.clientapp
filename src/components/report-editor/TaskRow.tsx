@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumberField } from "@/components/ui/number-field";
 import {
   Select,
   SelectContent,
@@ -14,16 +15,6 @@ import {
 } from "@/components/ui/select";
 import type { PriorityType, TaskStatus as ApiTaskStatus } from "@/lib/api/types";
 import type { ReportTask } from "@/lib/types";
-
-function clampPercent(value: number): number {
-  if (Number.isNaN(value)) return 0;
-  return Math.min(100, Math.max(0, value));
-}
-
-function clampNonNegative(value: number): number {
-  if (Number.isNaN(value)) return 0;
-  return Math.max(0, value);
-}
 
 export function TaskRow({
   task,
@@ -132,43 +123,39 @@ export function TaskRow({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <div className="space-y-1.5">
           <Label>Planned %</Label>
-          <Input
-            type="number"
+          <NumberField
             min={0}
             max={100}
             value={task.plannedPct}
-            onChange={(e) => patch({ plannedPct: clampPercent(Number(e.target.value)) })}
+            onChange={(value) => patch({ plannedPct: value })}
             className="h-10"
           />
         </div>
         <div className="space-y-1.5">
           <Label>Actual %</Label>
-          <Input
-            type="number"
+          <NumberField
             min={0}
             max={100}
             value={task.actualPct}
-            onChange={(e) => patch({ actualPct: clampPercent(Number(e.target.value)) })}
+            onChange={(value) => patch({ actualPct: value })}
             className="h-10"
           />
         </div>
         <div className="space-y-1.5">
           <Label>Planned hrs</Label>
-          <Input
-            type="number"
+          <NumberField
             min={0}
             value={task.plannedHours}
-            onChange={(e) => patch({ plannedHours: clampNonNegative(Number(e.target.value)) })}
+            onChange={(value) => patch({ plannedHours: value })}
             className="h-10"
           />
         </div>
         <div className="space-y-1.5">
           <Label>Time spent</Label>
-          <Input
-            type="number"
+          <NumberField
             min={0}
             value={task.timeSpent}
-            onChange={(e) => patch({ timeSpent: clampNonNegative(Number(e.target.value)) })}
+            onChange={(value) => patch({ timeSpent: value })}
             className="h-10"
           />
         </div>

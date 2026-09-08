@@ -9,8 +9,10 @@ import { FilterBar, type FilterConfig } from "@/components/FilterBar";
 import { PageActions } from "@/components/PageActions";
 import { ReportTable } from "@/components/ReportTable";
 import { Button } from "@/components/ui/button";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { weekLabel } from "@/lib/demo-data";
 import { useStore } from "@/lib/store";
+import { usePagination } from "@/lib/use-pagination";
 import { STATUS_LABEL, type ReportStatus } from "@/lib/types";
 
 export default function ReportHistoryPage() {
@@ -64,6 +66,8 @@ export default function ReportHistoryPage() {
       })
       .sort((a, b) => b.weekStart.localeCompare(a.weekStart));
   }, [myReports, status, projectId, week, search, projects]);
+
+  const { page, setPage, pageCount, pageItems: pagedReports } = usePagination(filtered, 10);
 
   const filters: FilterConfig[] = [
     {
@@ -123,7 +127,8 @@ export default function ReportHistoryPage() {
       <p className="text-muted-foreground text-sm">
         {filtered.length} report{filtered.length === 1 ? "" : "s"} found
       </p>
-      <ReportTable reports={filtered} mode="member" />
+      <ReportTable reports={pagedReports} mode="member" />
+      <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }
