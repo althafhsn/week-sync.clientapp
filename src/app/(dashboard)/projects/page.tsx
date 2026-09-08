@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,11 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePagination } from "@/lib/use-pagination";
 import {
   createProject,
   deleteProject,
-  listProjects,
+  listProjectsPage,
   updateProject,
 } from "@/lib/api/projects-client";
 import { listProjectStatuses } from "@/lib/api/project-statuses-client";
@@ -28,6 +27,7 @@ import { listTeams } from "@/lib/api/teams-client";
 import type { Project, ProjectStatus, Team, User } from "@/lib/api/types";
 
 const INCLUDE = ["users", "teams", "projectStatus"];
+const PAGE_SIZE = 8;
 
 function blankDraft(defaultStatusId: number | null): ProjectDraft {
   return {
@@ -79,6 +79,8 @@ function ProjectCardSkeleton() {
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [statuses, setStatuses] = useState<ProjectStatus[]>([]);
@@ -91,19 +93,27 @@ export default function ProjectsPage() {
     description: "Manage the projects and categories teams report against.",
   });
 
-  const { page, setPage, pageCount, pageItems: pagedProjects } = usePagination(projects, 8);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const loadProjects = useCallback((pageToLoad: number) => {
+    return listProjectsPage(pageToLoad, PAGE_SIZE, INCLUDE).then((result) => {
+      setProjects(result.data);
+      setTotal(result.count);
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
     Promise.all([
-      listProjects(INCLUDE),
+      loadProjects(page),
       listUsers(),
       listProjectStatuses(),
       listTeams(),
     ])
-      .then(([projectList, userList, statusList, teamList]) => {
+      .then(([, userList, statusList, teamList]) => {
         if (cancelled) return;
-        setProjects(projectList);
         setUsers(userList);
         setStatuses(statusList);
         setTeams(teamList);
@@ -117,7 +127,7 @@ export default function ProjectsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [page, loadProjects]);
 
   async function handleSave() {
     if (!draft || !draft.name.trim() || draft.projectStatusId == null || saving) {
@@ -133,15 +143,12 @@ export default function ProjectsPage() {
         userProjects: draft.memberIds.map((id) => ({ user: { id } })),
         teamProjects: draft.teamIds.map((id) => ({ team: { id } })),
       };
-      const saved = draft.id
-        ? await updateProject(draft.id, payload, INCLUDE)
-        : await createProject(payload, INCLUDE);
-      setProjects((prev) => {
-        const exists = prev.some((p) => p.id === saved.id);
-        return exists
-          ? prev.map((p) => (p.id === saved.id ? saved : p))
-          : [...prev, saved];
-      });
+      if (draft.id) {
+        await updateProject(draft.id, payload, INCLUDE);
+      } else {
+        await createProject(payload, INCLUDE);
+      }
+      await loadProjects(page);
       setDraft(null);
     } catch (error) {
       toast.error(errorMessage(error, "Failed to save project."));
@@ -153,7 +160,14 @@ export default function ProjectsPage() {
   async function handleDelete(id: string) {
     try {
       await deleteProject(id);
-      setProjects((prev) => prev.filter((p) => p.id !== id));
+      // Dropping the last row on a page beyond the first steps back a page
+      // instead of leaving the view stranded on now-empty results.
+      const targetPage = projects.length === 1 && page > 1 ? page - 1 : page;
+      if (targetPage !== page) {
+        setPage(targetPage);
+      } else {
+        await loadProjects(targetPage);
+      }
     } catch (error) {
       toast.error(errorMessage(error, "Failed to delete project."));
     }
@@ -194,7 +208,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {pagedProjects.map((project) => {
+          {projects.map((project) => {
             const memberCount = project.userProjects?.length ?? 0;
             return (
               <Card key={project.id}>

@@ -1,8 +1,9 @@
 import { apiFetch } from "@/lib/api/client-fetch";
-import { fetchAllPages } from "@/lib/api/pagination-fetch";
+import { fetchAllPages, fetchPage } from "@/lib/api/pagination-fetch";
 import { cached, ENTITY_TTL_MS, invalidate } from "@/lib/api/request-cache";
 import type {
   CreateReportWithVersionRequest,
+  PaginatedResult,
   Report,
   ReportHistoryDetail,
   ReportHistoryEntry,
@@ -32,6 +33,9 @@ export const REPORT_LIST_INCLUDE = ["reportStatus", "tasks", "reportHours"];
 export interface ListReportsFilters {
   userId?: string;
   projectId?: string;
+  reportStatusId?: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 function includeQuery(include?: string[]) {
@@ -43,6 +47,11 @@ function listReportsQuery(include?: string[], filters?: ListReportsFilters) {
   if (include?.length) params.set("include", include.join(","));
   if (filters?.userId) params.set("filters.userid", filters.userId);
   if (filters?.projectId) params.set("filters.projectid", filters.projectId);
+  if (filters?.reportStatusId != null) {
+    params.set("filters.reportstatusid", String(filters.reportStatusId));
+  }
+  if (filters?.startDate) params.set("filters.startdate", filters.startDate);
+  if (filters?.endDate) params.set("filters.enddate", filters.endDate);
   const query = params.toString();
   return query ? `?${query}` : "";
 }
@@ -53,6 +62,22 @@ export async function listReports(
 ): Promise<Report[]> {
   const path = `${CACHE_PREFIX}${listReportsQuery(include, filters)}`;
   return cached(path, () => fetchAllPages<Report>(path), ENTITY_TTL_MS);
+}
+
+/** Fetches one page of reports matching `filters`, for pages that drive
+ * their own pagination controls instead of loading the full list. */
+export async function listReportsPage(
+  filters: ListReportsFilters | undefined,
+  page: number,
+  pageSize: number,
+  include: string[] = REPORT_LIST_INCLUDE
+): Promise<PaginatedResult<Report>> {
+  const path = `${CACHE_PREFIX}${listReportsQuery(include, filters)}`;
+  return cached(
+    `${path}&page=${page}&pageSize=${pageSize}`,
+    () => fetchPage<Report>(path, page, pageSize),
+    ENTITY_TTL_MS
+  );
 }
 
 export async function getReport(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,17 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePagination } from "@/lib/use-pagination";
 import {
   createTeam,
   deleteTeam,
-  listTeams,
+  listTeamsPage,
   updateTeam,
 } from "@/lib/api/teams-client";
 import { listUsers } from "@/lib/api/users-client";
 import type { Team, User } from "@/lib/api/types";
 
 const INCLUDE = ["members"];
+const PAGE_SIZE = 9;
 
 function blankDraft(): TeamDraft {
   return {
@@ -62,6 +62,8 @@ function TeamCardSkeleton() {
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -72,14 +74,22 @@ export default function TeamsPage() {
     description: "Group users into teams and share project access across them.",
   });
 
-  const { page, setPage, pageCount, pageItems: pagedTeams } = usePagination(teams, 9);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const loadTeams = useCallback((pageToLoad: number) => {
+    return listTeamsPage(pageToLoad, PAGE_SIZE, INCLUDE).then((result) => {
+      setTeams(result.data);
+      setTotal(result.count);
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([listTeams(INCLUDE), listUsers()])
-      .then(([teamList, userList]) => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    Promise.all([loadTeams(page), listUsers()])
+      .then(([, userList]) => {
         if (cancelled) return;
-        setTeams(teamList);
         setUsers(userList);
       })
       .catch((error) => toast.error(errorMessage(error, "Failed to load teams.")))
@@ -89,7 +99,7 @@ export default function TeamsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [page, loadTeams]);
 
   async function handleSave() {
     if (!draft || !draft.name.trim() || saving) {
@@ -102,15 +112,12 @@ export default function TeamsPage() {
         isActive: draft.isActive,
         teamMembers: draft.memberIds.map((id) => ({ user: { id } })),
       };
-      const saved = draft.id
-        ? await updateTeam(draft.id, payload, INCLUDE)
-        : await createTeam(payload, INCLUDE);
-      setTeams((prev) => {
-        const exists = prev.some((t) => t.id === saved.id);
-        return exists
-          ? prev.map((t) => (t.id === saved.id ? saved : t))
-          : [...prev, saved];
-      });
+      if (draft.id) {
+        await updateTeam(draft.id, payload, INCLUDE);
+      } else {
+        await createTeam(payload, INCLUDE);
+      }
+      await loadTeams(page);
       setDraft(null);
     } catch (error) {
       toast.error(errorMessage(error, "Failed to save team."));
@@ -122,7 +129,12 @@ export default function TeamsPage() {
   async function handleDelete(id: string) {
     try {
       await deleteTeam(id);
-      setTeams((prev) => prev.filter((t) => t.id !== id));
+      const targetPage = teams.length === 1 && page > 1 ? page - 1 : page;
+      if (targetPage !== page) {
+        setPage(targetPage);
+      } else {
+        await loadTeams(targetPage);
+      }
     } catch (error) {
       toast.error(errorMessage(error, "Failed to delete team."));
     }
@@ -156,7 +168,7 @@ export default function TeamsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <TeamCardSkeleton key={i} />)
-          : pagedTeams.map((team) => {
+          : teams.map((team) => {
               const memberCount = team.teamMembers?.length ?? 0;
               return (
                 <Card key={team.id}>

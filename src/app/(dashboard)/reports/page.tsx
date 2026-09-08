@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
@@ -10,13 +10,16 @@ import { PageActions } from "@/components/PageActions";
 import { ReportTable } from "@/components/ReportTable";
 import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { weekLabel } from "@/lib/demo-data";
+import { apiReportToWeeklyReport } from "@/lib/api/mappers";
+import { findReportStatusId } from "@/lib/api/report-status";
+import { listReportsPage } from "@/lib/api/reports-client";
 import { useStore } from "@/lib/store";
-import { usePagination } from "@/lib/use-pagination";
-import { STATUS_LABEL, type ReportStatus } from "@/lib/types";
+import { STATUS_LABEL, type ReportStatus, type WeeklyReport } from "@/lib/types";
+
+const PAGE_SIZE = 10;
 
 export default function ReportHistoryPage() {
-  const { currentUser, reports, projects } = useStore();
+  const { currentUser, projects, reportStatuses, hydrated, signedIn } = useStore();
 
   usePageHeader({
     title: "Report history",
@@ -26,48 +29,69 @@ export default function ReportHistoryPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [projectId, setProjectId] = useState("all");
-  const [week, setWeek] = useState("all");
+  const [weekStart, setWeekStart] = useState("");
+  const [weekEnd, setWeekEnd] = useState("");
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState<WeeklyReport[]>([]);
+  const [total, setTotal] = useState(0);
 
-  const myReports = useMemo(
-    () =>
-      currentUser
-        ? reports.filter((r) => r.memberId === currentUser.id)
-        : [],
-    [reports, currentUser]
-  );
+  // Any filter change invalidates the current page number.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [status, projectId, weekStart, weekEnd]);
 
-  const myProjects = useMemo(
-    () =>
-      projects.filter((p) => myReports.some((r) => r.projectId === p.id)),
-    [projects, myReports]
-  );
+  useEffect(() => {
+    if (!hydrated || !signedIn || !currentUser) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const reportStatusId =
+      status === "all" ? undefined : findReportStatusId(reportStatuses, status as ReportStatus);
 
-  const myWeeks = useMemo(() => {
-    const map = new Map<string, string>();
-    myReports.forEach((r) => map.set(r.weekStart, r.weekEnd));
-    return Array.from(map.entries())
-      .map(([start, end]) => ({ start, end }))
-      .sort((a, b) => b.start.localeCompare(a.start));
-  }, [myReports]);
+    listReportsPage(
+      {
+        // A manager's own report history must stay scoped to themself —
+        // the backend only auto-restricts non-manager callers.
+        userId: currentUser.id,
+        projectId: projectId === "all" ? undefined : projectId,
+        reportStatusId,
+        startDate: weekStart || undefined,
+        endDate: weekEnd || undefined,
+      },
+      page,
+      PAGE_SIZE
+    )
+      .then((result) => {
+        if (cancelled) return;
+        setReports(result.data.map(apiReportToWeeklyReport));
+        setTotal(result.count);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, signedIn, currentUser, status, projectId, weekStart, weekEnd, page, reportStatuses]);
+
+  // The backend has no full-text search filter, so search narrows only the
+  // page of results already fetched from the API.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return myReports
-      .filter((r) => (status === "all" ? true : r.status === status))
-      .filter((r) => (projectId === "all" ? true : r.projectId === projectId))
-      .filter((r) => (week === "all" ? true : r.weekStart === week))
-      .filter((r) => {
-        if (!q) return true;
-        const project = projects.find((p) => p.id === r.projectId);
-        return (
-          project?.name.toLowerCase().includes(q) ||
-          r.tasks.some((t) => t.name.toLowerCase().includes(q))
-        );
-      })
-      .sort((a, b) => b.weekStart.localeCompare(a.weekStart));
-  }, [myReports, status, projectId, week, search, projects]);
+    if (!q) return reports;
+    return reports.filter((r) => {
+      const project = projects.find((p) => p.id === r.projectId);
+      return (
+        project?.name.toLowerCase().includes(q) ||
+        r.tasks.some((t) => t.name.toLowerCase().includes(q))
+      );
+    });
+  }, [reports, search, projects]);
 
-  const { page, setPage, pageCount, pageItems: pagedReports } = usePagination(filtered, 10);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const filters: FilterConfig[] = [
     {
@@ -85,17 +109,7 @@ export default function ReportHistoryPage() {
       label: "Projects",
       value: projectId,
       onChange: setProjectId,
-      options: myProjects.map((p) => ({ value: p.id, label: p.name })),
-    },
-    {
-      id: "week",
-      label: "Weeks",
-      value: week,
-      onChange: setWeek,
-      options: myWeeks.map((w) => ({
-        value: w.start,
-        label: weekLabel(w.start, w.end),
-      })),
+      options: projects.map((p) => ({ value: p.id, label: p.name })),
     },
   ];
 
@@ -117,18 +131,27 @@ export default function ReportHistoryPage() {
         onSearchChange={setSearch}
         searchPlaceholder="Search by project or task…"
         filters={filters}
+        dateRange={{
+          startValue: weekStart,
+          endValue: weekEnd,
+          onStartChange: setWeekStart,
+          onEndChange: setWeekEnd,
+        }}
         onReset={() => {
           setSearch("");
           setStatus("all");
           setProjectId("all");
-          setWeek("all");
+          setWeekStart("");
+          setWeekEnd("");
         }}
       />
       <p className="text-muted-foreground text-sm">
-        {filtered.length} report{filtered.length === 1 ? "" : "s"} found
+        {total} report{total === 1 ? "" : "s"} found
       </p>
-      <ReportTable reports={pagedReports} mode="member" />
-      <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+      <ReportTable reports={filtered} mode="member" loading={loading} />
+      {!loading ? (
+        <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+      ) : null}
     </div>
   );
 }

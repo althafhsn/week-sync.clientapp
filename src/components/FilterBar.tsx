@@ -20,17 +20,26 @@ export interface FilterConfig {
   options: Array<{ value: string; label: string }>;
 }
 
+export interface DateRangeFilterConfig {
+  startValue: string;
+  endValue: string;
+  onStartChange: (value: string) => void;
+  onEndChange: (value: string) => void;
+}
+
 export function FilterBar({
   search,
   onSearchChange,
   searchPlaceholder = "Search…",
   filters,
+  dateRange,
   onReset,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
   filters: FilterConfig[];
+  dateRange?: DateRangeFilterConfig;
   onReset: () => void;
 }) {
   return (
@@ -73,6 +82,28 @@ export function FilterBar({
           </SelectContent>
         </Select>
       ))}
+
+      {dateRange ? (
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            value={dateRange.startValue}
+            onChange={(event) => dateRange.onStartChange(event.target.value)}
+            max={dateRange.endValue || undefined}
+            aria-label="Start date"
+            className="h-10 w-auto"
+          />
+          <span className="text-muted-foreground text-sm">to</span>
+          <Input
+            type="date"
+            value={dateRange.endValue}
+            onChange={(event) => dateRange.onEndChange(event.target.value)}
+            min={dateRange.startValue || undefined}
+            aria-label="End date"
+            className="h-10 w-auto"
+          />
+        </div>
+      ) : null}
 
       <Button type="button" variant="outline" className="h-10" onClick={onReset}>
         <XIcon className="size-4" />

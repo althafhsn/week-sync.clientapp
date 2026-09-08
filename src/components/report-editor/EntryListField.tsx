@@ -3,7 +3,7 @@
 import { Plus, Star, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -84,11 +84,12 @@ export function EntryListField({
             </SelectContent>
           </Select>
 
-          <Input
+          <Textarea
             value={item.description}
             onChange={(e) => updateItem(item.id, { description: e.target.value })}
             placeholder="Description"
-            className="h-10 flex-1"
+            rows={3}
+            className="flex-1 resize-none py-2 sm:min-h-10"
           />
 
           <div className="flex shrink-0 items-center gap-1">

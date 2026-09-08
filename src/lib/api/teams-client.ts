@@ -1,8 +1,9 @@
 import { apiFetch } from "@/lib/api/client-fetch";
-import { fetchAllPages } from "@/lib/api/pagination-fetch";
+import { fetchAllPages, fetchPage } from "@/lib/api/pagination-fetch";
 import { cached, ENTITY_TTL_MS, invalidate } from "@/lib/api/request-cache";
 import type {
   CreateTeamRequest,
+  PaginatedResult,
   Team,
   UpdateTeamRequest,
 } from "@/lib/api/types";
@@ -16,6 +17,21 @@ function includeQuery(include?: string[]) {
 export async function listTeams(include?: string[]): Promise<Team[]> {
   const path = `${CACHE_PREFIX}${includeQuery(include)}`;
   return cached(path, () => fetchAllPages<Team>(path), ENTITY_TTL_MS);
+}
+
+/** Fetches one page of teams, for pages that drive their own pagination
+ * controls instead of loading the full list. */
+export async function listTeamsPage(
+  page: number,
+  pageSize: number,
+  include?: string[]
+): Promise<PaginatedResult<Team>> {
+  const path = `${CACHE_PREFIX}${includeQuery(include)}`;
+  return cached(
+    `${path}&page=${page}&pageSize=${pageSize}`,
+    () => fetchPage<Team>(path, page, pageSize),
+    ENTITY_TTL_MS
+  );
 }
 
 export async function createTeam(

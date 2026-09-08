@@ -175,10 +175,10 @@ export default function ReviewReportPage() {
                 onChange={(e) => setComment(e.target.value)}
                 disabled={!isSubmitted || submitting}
               />
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-row gap-2">
                 <Button
                   type="button"
-                  className="bg-success text-success-foreground hover:bg-success/85 flex-1"
+                  className="bg-success text-success-foreground hover:bg-success/85 h-11 flex-1 sm:h-9"
                   disabled={!isSubmitted || submitting}
                   onClick={() => handleDecision("approved")}
                 >
@@ -187,7 +187,7 @@ export default function ReviewReportPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1"
+                  className="h-11 flex-1 sm:h-9"
                   disabled={!isSubmitted || submitting}
                   onClick={() => handleDecision("changes_requested")}
                 >

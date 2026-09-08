@@ -9,6 +9,18 @@ function appendPaging(path: string, page: number, pageSize: number): string {
   return `${path}${separator}page=${page}&pageSize=${pageSize}`;
 }
 
+/** Fetches exactly one page from a paginated list endpoint. `basePath`
+ * should already include any `include=`/`filters.*` query params but no
+ * `page`/`pageSize`. Unlike `fetchAllPages`, this does not loop — the
+ * caller owns pagination (page controls, total count from `result.count`). */
+export async function fetchPage<T>(
+  basePath: string,
+  page: number,
+  pageSize: number
+): Promise<PaginatedResult<T>> {
+  return apiFetch<PaginatedResult<T>>(appendPaging(basePath, page, pageSize));
+}
+
 /** Loops a paginated list endpoint until every row has been fetched, instead
  * of silently returning only the first page. `basePath` should already
  * include any `include=`/`filters.*` query params but no `page`/`pageSize`. */

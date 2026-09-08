@@ -1,13 +1,5 @@
 import type { WeeklyReport } from "./types";
 
-export const weeks = [
-  { start: "2026-08-03", end: "2026-08-07", label: "Aug 3 – Aug 7, 2026" },
-  { start: "2026-08-10", end: "2026-08-14", label: "Aug 10 – Aug 14, 2026" },
-  { start: "2026-08-17", end: "2026-08-21", label: "Aug 17 – Aug 21, 2026" },
-  { start: "2026-08-24", end: "2026-08-28", label: "Aug 24 – Aug 28, 2026" },
-  { start: "2026-08-31", end: "2026-09-04", label: "Aug 31 – Sep 4, 2026" },
-];
-
 function parseLocalDate(iso: string) {
   const [year, month, day] = iso.split("-").map(Number);
   return new Date(year!, (month ?? 1) - 1, day ?? 1);
@@ -57,9 +49,29 @@ const HIGHLIGHT_TYPE = {
   blocker: { reportHighlightTypeId: 3, typeName: "Blocker" },
 };
 
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function toISODate(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Last week's Monday through Friday, relative to today. */
+export function lastWeekRange(): { start: string; end: string } {
+  const now = new Date();
+  const daysSinceMonday = (now.getDay() + 6) % 7; // Mon=0 ... Sun=6
+  const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday);
+  const lastMonday = new Date(thisMonday);
+  lastMonday.setDate(thisMonday.getDate() - 7);
+  const lastFriday = new Date(lastMonday);
+  lastFriday.setDate(lastMonday.getDate() + 4);
+  return { start: toISODate(lastMonday), end: toISODate(lastFriday) };
+}
+
 export function emptyReport(memberId: string, projectId: string): WeeklyReport {
   const now = new Date().toISOString();
-  const week = weeks[weeks.length - 1]!;
+  const week = lastWeekRange();
   return {
     id: `r-${Math.random().toString(36).slice(2, 9)}`,
     memberId,

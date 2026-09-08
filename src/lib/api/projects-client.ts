@@ -1,8 +1,9 @@
 import { apiFetch } from "@/lib/api/client-fetch";
-import { fetchAllPages } from "@/lib/api/pagination-fetch";
+import { fetchAllPages, fetchPage } from "@/lib/api/pagination-fetch";
 import { cached, ENTITY_TTL_MS, invalidate } from "@/lib/api/request-cache";
 import type {
   CreateProjectRequest,
+  PaginatedResult,
   Project,
   UpdateProjectRequest,
 } from "@/lib/api/types";
@@ -15,12 +16,16 @@ function includeQuery(include?: string[]) {
 
 export interface ListProjectsFilters {
   userId?: string;
+  projectStatusId?: number;
 }
 
 function listProjectsQuery(include?: string[], filters?: ListProjectsFilters) {
   const params = new URLSearchParams();
   if (include?.length) params.set("include", include.join(","));
   if (filters?.userId) params.set("filters.userid", filters.userId);
+  if (filters?.projectStatusId != null) {
+    params.set("filters.projectstatusid", String(filters.projectStatusId));
+  }
   const query = params.toString();
   return query ? `?${query}` : "";
 }
@@ -31,6 +36,22 @@ export async function listProjects(
 ): Promise<Project[]> {
   const path = `${CACHE_PREFIX}${listProjectsQuery(include, filters)}`;
   return cached(path, () => fetchAllPages<Project>(path), ENTITY_TTL_MS);
+}
+
+/** Fetches one page of projects, for pages that drive their own pagination
+ * controls instead of loading the full list. */
+export async function listProjectsPage(
+  page: number,
+  pageSize: number,
+  include?: string[],
+  filters?: ListProjectsFilters
+): Promise<PaginatedResult<Project>> {
+  const path = `${CACHE_PREFIX}${listProjectsQuery(include, filters)}`;
+  return cached(
+    `${path}&page=${page}&pageSize=${pageSize}`,
+    () => fetchPage<Project>(path, page, pageSize),
+    ENTITY_TTL_MS
+  );
 }
 
 export async function createProject(
