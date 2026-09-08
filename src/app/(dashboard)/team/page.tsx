@@ -113,7 +113,7 @@ export default function TeamDashboardPage() {
 
   const latestReports = [...reports]
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 6);
+    .slice(0, 3);
 
   return (
     <div className="space-y-6">
