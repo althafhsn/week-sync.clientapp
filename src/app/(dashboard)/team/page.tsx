@@ -102,7 +102,7 @@ export default function TeamDashboardPage() {
 
   const readyForReview = [...awaitingReview]
     .sort((a, b) => (b.submittedAt ?? "").localeCompare(a.submittedAt ?? ""))
-    .slice(0, 5);
+    .slice(0, 3);
 
   const teamStatus = members.map((member) => {
     const currentWeekReport = reports.find(
