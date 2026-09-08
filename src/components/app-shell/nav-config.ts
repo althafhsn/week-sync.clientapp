@@ -27,7 +27,7 @@ const MEMBER_NAV: NavItem[] = [
 
 const MANAGER_NAV: NavItem[] = [
   { href: "/team", label: "Team Dashboard", icon: LayoutDashboard },
-  { href: "/team/reports", label: "Team Reports", icon: ClipboardList },
+  { href: "/team/reports", label: "Reports", icon: ClipboardList },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/users", label: "Users", icon: Users },
   { href: "/teams", label: "Teams", icon: Users2 },
