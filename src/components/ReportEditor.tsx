@@ -48,6 +48,7 @@ import type {
   ReportTask,
   WeeklyReport,
 } from "@/lib/types";
+import { NumericInput } from "./report-editor/NumericInput";
 
 const ASSIGNED_PROJECTS_INCLUDE = ["users", "projectStatus"];
 
@@ -467,15 +468,12 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
                   <Label className="text-muted-foreground text-xs font-normal">
                     {field.label}
                   </Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={report.hours[field.key]}
-                    onChange={(e) =>
-                      patchHours(field.key, Number(e.target.value))
-                    }
-                    className="h-10"
-                  />
+                  <NumericInput
+  value={report.hours[field.key]}
+  min={0}
+  step={0.25}
+  onCommit={(value) => patchHours(field.key, value)}
+/>
                 </div>
               ))}
             </div>

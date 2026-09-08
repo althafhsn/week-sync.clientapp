@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import type { PriorityType, TaskStatus as ApiTaskStatus } from "@/lib/api/types";
 import type { ReportTask } from "@/lib/types";
+import { NumericInput } from "./NumericInput";
 
 export function TaskRow({
   task,
@@ -119,50 +120,49 @@ export function TaskRow({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
-        <div className="space-y-1.5">
-          <Label>Planned %</Label>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            value={task.plannedPct}
-            onChange={(e) => patch({ plannedPct: Number(e.target.value) })}
-            className="h-10"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Actual %</Label>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            value={task.actualPct}
-            onChange={(e) => patch({ actualPct: Number(e.target.value) })}
-            className="h-10"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Planned hrs</Label>
-          <Input
-            type="number"
-            min={0}
-            value={task.plannedHours}
-            onChange={(e) => patch({ plannedHours: Number(e.target.value) })}
-            className="h-10"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Time spent</Label>
-          <Input
-            type="number"
-            min={0}
-            value={task.timeSpent}
-            onChange={(e) => patch({ timeSpent: Number(e.target.value) })}
-            className="h-10"
-          />
-        </div>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+      <div className="space-y-1.5">
+        <Label>Planned %</Label>
+        <NumericInput
+          value={task.plannedPct}
+          min={0}
+          max={100}
+          integer
+          onCommit={(value) => patch({ plannedPct: value })}
+        />
       </div>
+
+      <div className="space-y-1.5">
+        <Label>Actual %</Label>
+        <NumericInput
+          value={task.actualPct}
+          min={0}
+          max={100}
+          integer
+          onCommit={(value) => patch({ actualPct: value })}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Planned hrs</Label>
+        <NumericInput
+          value={task.plannedHours}
+          min={0}
+          step={0.25}
+          onCommit={(value) => patch({ plannedHours: value })}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Time spent</Label>
+        <NumericInput
+          value={task.timeSpent}
+          min={0}
+          step={0.25}
+          onCommit={(value) => patch({ timeSpent: value })}
+        />
+      </div>
+    </div>
 
       <div className="space-y-1.5">
         <Label>Deliverable / link</Label>
