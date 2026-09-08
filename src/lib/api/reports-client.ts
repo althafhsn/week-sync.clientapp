@@ -24,7 +24,11 @@ export const REPORT_INCLUDE = [
 // The list endpoint returns many rows at once, so it only pulls the status
 // lookup by default; callers that need the full nested shape (detail views,
 // create/update responses) use REPORT_INCLUDE instead.
-export const REPORT_LIST_INCLUDE = ["reportStatus"];
+export const REPORT_LIST_INCLUDE = [
+  "reportStatus",
+  "tasks",
+  "reportHours",
+];
 
 export interface ListReportsFilters {
   userId?: string;
