@@ -106,7 +106,7 @@ export default function LoginPage() {
             <>
               <div className="space-y-1.5">
                 <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                  Sign in to Weekly Review Hub
+                  Sign in to Week Sync
                 </h1>
                 <p className="text-muted-foreground text-sm">
                   Welcome back. Enter your details to continue.

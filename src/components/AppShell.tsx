@@ -17,7 +17,7 @@ export interface PageHeaderValue {
   description?: string;
 }
 
-const DEFAULT_HEADER: PageHeaderValue = { title: "Weekly Review Hub" };
+const DEFAULT_HEADER: PageHeaderValue = { title: "Weekly Sync" };
 
 const SetPageHeaderContext = createContext<
   ((value: PageHeaderValue) => void) | null

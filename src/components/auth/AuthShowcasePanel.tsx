@@ -39,7 +39,7 @@ export function AuthShowcasePanel() {
   return (
     <div className="hidden lg:flex lg:flex-col lg:justify-between h-full w-full border-r border-border bg-secondary text-foreground px-10 py-12 xl:px-14">
       <div className="text-lg font-semibold tracking-tight">
-        Weekly Review Hub
+        Weekl sync
       </div>
 
       <div className="max-w-md space-y-4">

@@ -88,7 +88,7 @@ export default function SignupPage() {
                   Create your account
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  Request access to Weekly Review Hub — a manager will
+                  Request access to Week Sync — a manager will
                   approve your account before you can sign in.
                 </p>
               </div>

@@ -62,7 +62,7 @@ export function SidebarNav({
       </nav>
 
       <div className="text-muted-foreground border-border border-t px-5 py-4 text-xs">
-        Weekly Review Hub
+        Weekly sync
       </div>
     </div>
   );
