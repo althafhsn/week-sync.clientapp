@@ -1,5 +1,6 @@
 import type { ProjectStatus } from "../lookups/project-status";
 import type { UserProject } from "./user-project";
+import type { TeamProject } from "./team-project";
 import type { Report } from "./report";
 
 export interface Project {
@@ -13,5 +14,6 @@ export interface Project {
   // present only when requested via ?include=
   projectStatus?: ProjectStatus;
   userProjects?: UserProject[];
+  teamProjects?: TeamProject[];
   reports?: Report[];
 }

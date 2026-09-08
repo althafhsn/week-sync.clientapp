@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Clock3 } from "lucide-react";
 
 import { destinationFor } from "@/components/auth/AuthGate";
 import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
@@ -10,10 +11,16 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useStore } from "@/lib/store";
 import { loginWithApi } from "@/lib/api/auth-client";
 import { apiUserToUser } from "@/lib/api/mappers";
 import type { Role } from "@/lib/types";
+
+// Substring shared with the backend's login-rejection message for a signup
+// that hasn't been approved yet — used to show the same "awaiting approval"
+// panel as the signup page instead of a generic error toast.
+const PENDING_APPROVAL_HINT = "awaiting manager approval";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,6 +28,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("reason") === "session_expired") {
@@ -48,11 +56,15 @@ export default function LoginPage() {
         user.mustChangePassword ? "/change-password" : destinationFor(role)
       );
     } catch (error) {
-      toast.error(
+      const message =
         error instanceof Error
           ? error.message
-          : "Those credentials don't match an account."
-      );
+          : "Those credentials don't match an account.";
+      if (message.toLowerCase().includes(PENDING_APPROVAL_HINT)) {
+        setPendingApproval(true);
+      } else {
+        toast.error(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -68,55 +80,80 @@ export default function LoginPage() {
         </div>
 
         <div className="w-full max-w-sm space-y-8">
-          <div className="space-y-1.5">
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-              Sign in to Weekly Review Hub
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Welcome back. Enter your details to continue.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Work email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@company.com"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="h-11"
-              />
+          {pendingApproval ? (
+            <div className="space-y-4 text-center">
+              <Clock3 className="text-warning mx-auto size-10" />
+              <div className="space-y-1.5">
+                <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  Awaiting approval
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Your account request has been submitted and is waiting on a
+                  manager to approve it. You&apos;ll be able to sign in as
+                  soon as it&apos;s approved.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10"
+                onClick={() => setPendingApproval(false)}
+              >
+                Back to sign in
+              </Button>
             </div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  Sign in to Weekly Review Hub
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Welcome back. Enter your details to continue.
+                </p>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="h-11"
-              />
-            </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Work email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@company.com"
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="h-11"
+                  />
+                </div>
 
-            <Button type="submit" className="h-11 w-full" disabled={submitting}>
-              {submitting ? "Signing in…" : "Sign in"}
-            </Button>
-          </form>
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">Password</Label>
+                  <PasswordInput
+                    id="password"
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    required
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="h-11"
+                  />
+                </div>
 
-          <p className="text-muted-foreground text-center text-sm">
-            New here?{" "}
-            <a href="/signup" className="text-foreground font-medium underline underline-offset-4">
-              Create an account
-            </a>
-          </p>
+                <Button type="submit" className="h-11 w-full" disabled={submitting}>
+                  {submitting ? "Signing in…" : "Sign in"}
+                </Button>
+              </form>
+
+              <p className="text-muted-foreground text-center text-sm">
+                New here?{" "}
+                <a href="/signup" className="text-foreground font-medium underline underline-offset-4">
+                  Create an account
+                </a>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

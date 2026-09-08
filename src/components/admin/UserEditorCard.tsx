@@ -23,7 +23,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { generateTempPassword } from "@/lib/password";
-import type { Role } from "@/lib/api/types";
+import type { Role, Team } from "@/lib/api/types";
 
 export interface UserDraft {
   id: string | null;
@@ -32,13 +32,17 @@ export interface UserDraft {
   jobTitle: string;
   password: string; // new temp password; blank on edit means "leave unchanged"
   roleId: number | null;
+  teamId: string | null;
   mustChangePassword: boolean;
   isActive: boolean;
 }
 
+const NO_TEAM = "__none__";
+
 export function UserEditorCard({
   draft,
   roles,
+  teams,
   saving,
   onChange,
   onCancel,
@@ -46,6 +50,7 @@ export function UserEditorCard({
 }: {
   draft: UserDraft;
   roles: Role[];
+  teams: Team[];
   saving: boolean;
   onChange: (draft: UserDraft) => void;
   onCancel: () => void;
@@ -137,6 +142,38 @@ export function UserEditorCard({
               </span>
             </div>
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Team</Label>
+          <Select
+            items={[
+              { value: NO_TEAM, label: "No team" },
+              ...teams.map((t) => ({ value: t.id, label: t.name })),
+            ]}
+            value={draft.teamId ?? NO_TEAM}
+            onValueChange={(value) =>
+              onChange({ ...draft, teamId: value === NO_TEAM ? null : value })
+            }
+          >
+            <SelectTrigger className="h-10 w-full sm:w-56">
+              <SelectValue>
+                {teams.find((t) => t.id === draft.teamId)?.name ?? "No team"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_TEAM}>No team</SelectItem>
+              {teams.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">
+            Assigning a team gives this user access to every project shared
+            with that team.
+          </p>
         </div>
 
         <div className="space-y-1.5">

@@ -8,8 +8,8 @@ import { destinationFor } from "@/components/auth/AuthGate";
 import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { changePasswordWithApi } from "@/lib/api/auth-client";
 import { useStore } from "@/lib/store";
 
@@ -94,9 +94,8 @@ export default function ChangePasswordPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="currentPassword">Current (temporary) password</Label>
-              <Input
+              <PasswordInput
                 id="currentPassword"
-                type="password"
                 autoComplete="current-password"
                 placeholder="••••••••"
                 required
@@ -108,9 +107,8 @@ export default function ChangePasswordPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="newPassword">New password</Label>
-              <Input
+              <PasswordInput
                 id="newPassword"
-                type="password"
                 autoComplete="new-password"
                 placeholder="••••••••"
                 required
@@ -122,9 +120,8 @@ export default function ChangePasswordPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="confirmPassword">Confirm new password</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
                 autoComplete="new-password"
                 placeholder="••••••••"
                 required

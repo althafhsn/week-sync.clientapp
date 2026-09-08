@@ -3,6 +3,7 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   roleId: number;
+  userStatusId?: number;
   jobTitle?: string;
   mustChangePassword: boolean;
 }

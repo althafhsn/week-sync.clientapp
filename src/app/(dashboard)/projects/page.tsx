@@ -22,9 +22,10 @@ import {
 } from "@/lib/api/projects-client";
 import { listProjectStatuses } from "@/lib/api/project-statuses-client";
 import { listUsers } from "@/lib/api/users-client";
-import type { Project, ProjectStatus, User } from "@/lib/api/types";
+import { listTeams } from "@/lib/api/teams-client";
+import type { Project, ProjectStatus, Team, User } from "@/lib/api/types";
 
-const INCLUDE = ["users", "projectStatus"];
+const INCLUDE = ["users", "teams", "projectStatus"];
 
 function blankDraft(defaultStatusId: number | null): ProjectDraft {
   return {
@@ -34,6 +35,7 @@ function blankDraft(defaultStatusId: number | null): ProjectDraft {
     projectStatusId: defaultStatusId,
     isActive: true,
     memberIds: [],
+    teamIds: [],
   };
 }
 
@@ -45,6 +47,7 @@ function draftFromProject(project: Project): ProjectDraft {
     projectStatusId: project.projectStatusId,
     isActive: project.isActive,
     memberIds: (project.userProjects ?? []).map((up) => up.userId),
+    teamIds: (project.teamProjects ?? []).map((tp) => tp.teamId),
   };
 }
 
@@ -75,6 +78,7 @@ function ProjectCardSkeleton() {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [statuses, setStatuses] = useState<ProjectStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -87,12 +91,18 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([listProjects(INCLUDE), listUsers(), listProjectStatuses()])
-      .then(([projectList, userList, statusList]) => {
+    Promise.all([
+      listProjects(INCLUDE),
+      listUsers(),
+      listProjectStatuses(),
+      listTeams(),
+    ])
+      .then(([projectList, userList, statusList, teamList]) => {
         if (cancelled) return;
         setProjects(projectList);
         setUsers(userList);
         setStatuses(statusList);
+        setTeams(teamList);
       })
       .catch((error) =>
         toast.error(errorMessage(error, "Failed to load projects."))
@@ -117,6 +127,7 @@ export default function ProjectsPage() {
         projectStatus: { id: draft.projectStatusId },
         isActive: draft.isActive,
         userProjects: draft.memberIds.map((id) => ({ user: { id } })),
+        teamProjects: draft.teamIds.map((id) => ({ team: { id } })),
       };
       const saved = draft.id
         ? await updateProject(draft.id, payload, INCLUDE)
@@ -163,6 +174,7 @@ export default function ProjectsPage() {
           draft={draft}
           statuses={statuses}
           users={users}
+          teams={teams}
           saving={saving}
           onChange={setDraft}
           onCancel={() => setDraft(null)}

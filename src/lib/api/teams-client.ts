@@ -1,0 +1,59 @@
+import { apiFetch } from "@/lib/api/client-fetch";
+import { cached, ENTITY_TTL_MS, invalidate } from "@/lib/api/request-cache";
+import type {
+  CreateTeamRequest,
+  PaginatedResult,
+  Team,
+  UpdateTeamRequest,
+} from "@/lib/api/types";
+
+const CACHE_PREFIX = "/api/teams";
+
+function includeQuery(include?: string[]) {
+  return include?.length ? `?include=${include.join(",")}` : "";
+}
+
+export async function listTeams(include?: string[]): Promise<Team[]> {
+  const path = `${CACHE_PREFIX}${includeQuery(include)}`;
+  return cached(
+    path,
+    async () => {
+      const result = await apiFetch<PaginatedResult<Team>>(path);
+      return result.data;
+    },
+    ENTITY_TTL_MS
+  );
+}
+
+export async function createTeam(
+  payload: CreateTeamRequest,
+  include?: string[]
+): Promise<Team> {
+  const team = await apiFetch<Team>(`${CACHE_PREFIX}${includeQuery(include)}`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  invalidate(CACHE_PREFIX);
+  return team;
+}
+
+export async function updateTeam(
+  id: string,
+  payload: UpdateTeamRequest,
+  include?: string[]
+): Promise<Team> {
+  const team = await apiFetch<Team>(
+    `${CACHE_PREFIX}/${id}${includeQuery(include)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+  invalidate(CACHE_PREFIX);
+  return team;
+}
+
+export async function deleteTeam(id: string): Promise<void> {
+  await apiFetch<null>(`${CACHE_PREFIX}/${id}`, { method: "DELETE" });
+  invalidate(CACHE_PREFIX);
+}

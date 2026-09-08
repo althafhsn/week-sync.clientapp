@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import type { Role } from "@/lib/types";
 
-const MANAGER_ROUTE_PREFIXES = ["/team", "/projects", "/users"];
+const MANAGER_ROUTE_PREFIXES = ["/team", "/projects", "/users", "/teams"];
 const MEMBER_ROUTE_PREFIXES = ["/dashboard", "/reports"];
 
 export function destinationFor(role: Role) {

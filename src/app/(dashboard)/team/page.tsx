@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { CalendarClock, CheckCircle2, Clock3, FileWarning } from "lucide-react";
+import { toast } from "sonner";
 
 import { usePageHeader } from "@/components/AppShell";
 import { ReportTable } from "@/components/ReportTable";
@@ -12,6 +14,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { weekLabel } from "@/lib/demo-data";
 import { useLookups, useStore } from "@/lib/store";
+import { listUsers, updateUser } from "@/lib/api/users-client";
+import { listUserStatuses } from "@/lib/api/user-statuses-client";
+import type { User as ApiUser, UserStatus } from "@/lib/api/types";
+
+const PENDING_APPROVAL = "Pending Approval";
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function TeamDashboardPage() {
   const { reports, members } = useStore();
@@ -21,6 +32,46 @@ export default function TeamDashboardPage() {
     title: "Team dashboard",
     description: "Weekly delivery health and reports awaiting your review.",
   });
+
+  const [pendingUsers, setPendingUsers] = useState<ApiUser[]>([]);
+  const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([listUsers(["role", "userStatus"]), listUserStatuses()])
+      .then(([userList, statusList]) => {
+        if (cancelled) return;
+        setPendingUsers(userList.filter((u) => u.userStatus?.name === PENDING_APPROVAL));
+        setUserStatuses(statusList);
+      })
+      .catch((error) =>
+        toast.error(errorMessage(error, "Failed to load pending approvals."))
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleDecision(id: string, statusName: "Approved" | "Rejected") {
+    const status = userStatuses.find((s) => s.name === statusName);
+    if (!status) {
+      toast.error(`"${statusName}" status is not configured.`);
+      return;
+    }
+    setDecidingId(id);
+    try {
+      await updateUser(id, { userStatusId: status.id });
+      setPendingUsers((prev) => prev.filter((u) => u.id !== id));
+      toast.success(
+        statusName === "Approved" ? "User approved." : "Signup request rejected."
+      );
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to update approval status."));
+    } finally {
+      setDecidingId(null);
+    }
+  }
 
   const awaitingReview = reports.filter((r) => r.status === "submitted");
   const approved = reports.filter((r) => r.status === "approved");
@@ -79,6 +130,48 @@ export default function TeamDashboardPage() {
           tone="info"
         />
       </div>
+
+      {pendingUsers.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending approvals</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {pendingUsers.map((user) => (
+              <div
+                key={user.id}
+                className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-muted-foreground truncate text-xs">
+                    {user.email}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-warning/15 text-warning shrink-0 rounded-full px-2 py-0.5 text-xs font-medium">
+                    Pending approval
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => handleDecision(user.id, "Approved")}
+                    disabled={decidingId === user.id}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    render={<Link href="/users" />}
+                  >
+                    Review
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <TeamAnalytics reports={reports} />
 

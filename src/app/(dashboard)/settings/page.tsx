@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [email, setEmail] = useState("");
+  const [teamName, setTeamName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -34,12 +35,13 @@ export default function SettingsPage() {
     if (!currentUser) return;
     let cancelled = false;
 
-    getUser(currentUser.id)
+    getUser(currentUser.id, ["team"])
       .then((user) => {
         if (cancelled) return;
         setName(user.name);
         setJobTitle(user.jobTitle ?? "");
         setEmail(user.email);
+        setTeamName(user.teamMembers?.[0]?.team?.name ?? null);
       })
       .catch((error) =>
         toast.error(errorMessage(error, "Failed to load your profile."))
@@ -106,6 +108,17 @@ export default function SettingsPage() {
               <div className="space-y-1.5">
                 <Label>Email</Label>
                 <Input value={email} disabled className="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Team</Label>
+                <Input
+                  value={teamName ?? "Unassigned"}
+                  disabled
+                  className="h-10"
+                />
+                <p className="text-muted-foreground text-xs">
+                  Only a manager can change your team.
+                </p>
               </div>
               <Button
                 className="h-10 w-full sm:w-auto"

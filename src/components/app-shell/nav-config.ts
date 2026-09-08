@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Settings,
   Users,
+  Users2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,6 +30,7 @@ const MANAGER_NAV: NavItem[] = [
   { href: "/team/reports", label: "Team Reports", icon: ClipboardList },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/users", label: "Users", icon: Users },
+  { href: "/teams", label: "Teams", icon: Users2 },
   { href: "/settings", label: "Account Settings", icon: Settings },
 ];
 

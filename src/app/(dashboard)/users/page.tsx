@@ -12,15 +12,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateTempPassword } from "@/lib/password";
 import { listRoles } from "@/lib/api/roles-client";
+import { listUserStatuses } from "@/lib/api/user-statuses-client";
+import { listTeams } from "@/lib/api/teams-client";
+import { createTeamMember, deleteTeamMember } from "@/lib/api/team-members-client";
 import {
   createUser,
   deleteUser,
   listUsers,
   updateUser,
 } from "@/lib/api/users-client";
-import type { Role, User } from "@/lib/api/types";
+import type { Role, Team, User, UserStatus } from "@/lib/api/types";
 
-const INCLUDE = ["role"];
+const INCLUDE = ["role", "userStatus"];
+const PENDING_APPROVAL = "Pending Approval";
 
 function blankDraft(defaultRoleId: number | null): UserDraft {
   return {
@@ -30,12 +34,16 @@ function blankDraft(defaultRoleId: number | null): UserDraft {
     jobTitle: "",
     password: generateTempPassword(),
     roleId: defaultRoleId,
+    teamId: null,
     mustChangePassword: true,
     isActive: true,
   };
 }
 
-function draftFromUser(user: User): UserDraft {
+function draftFromUser(user: User, teams: Team[]): UserDraft {
+  const currentTeam = teams.find((t) =>
+    (t.teamMembers ?? []).some((tm) => tm.userId === user.id)
+  );
   return {
     id: user.id,
     name: user.name,
@@ -43,9 +51,18 @@ function draftFromUser(user: User): UserDraft {
     jobTitle: user.jobTitle ?? "",
     password: "",
     roleId: user.roleId,
+    teamId: currentTeam?.id ?? null,
     mustChangePassword: user.mustChangePassword,
     isActive: user.isActive,
   };
+}
+
+function membershipIdFor(teams: Team[], userId: string): string | null {
+  for (const team of teams) {
+    const membership = (team.teamMembers ?? []).find((tm) => tm.userId === userId);
+    if (membership) return membership.id;
+  }
+  return null;
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -71,9 +88,12 @@ function UserCardSkeleton() {
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<UserDraft | null>(null);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
 
   usePageHeader({
     title: "Users",
@@ -82,11 +102,18 @@ export default function UsersPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([listUsers(INCLUDE), listRoles()])
-      .then(([userList, roleList]) => {
+    Promise.all([
+      listUsers(INCLUDE),
+      listRoles(),
+      listUserStatuses(),
+      listTeams(["members"]),
+    ])
+      .then(([userList, roleList, statusList, teamList]) => {
         if (cancelled) return;
         setUsers(userList);
         setRoles(roleList);
+        setUserStatuses(statusList);
+        setTeams(teamList);
       })
       .catch((error) => toast.error(errorMessage(error, "Failed to load users.")))
       .finally(() => {
@@ -134,6 +161,32 @@ export default function UsersPage() {
             },
             INCLUDE
           );
+
+      const existingMembershipId = membershipIdFor(teams, saved.id);
+      const existingTeamId = teams.find((t) =>
+        (t.teamMembers ?? []).some((tm) => tm.userId === saved.id)
+      )?.id ?? null;
+      let nextTeams = teams;
+      if (existingTeamId !== draft.teamId) {
+        if (existingMembershipId) {
+          await deleteTeamMember(existingMembershipId);
+          nextTeams = nextTeams.map((t) =>
+            t.id === existingTeamId
+              ? { ...t, teamMembers: (t.teamMembers ?? []).filter((tm) => tm.id !== existingMembershipId) }
+              : t
+          );
+        }
+        if (draft.teamId) {
+          const membership = await createTeamMember({ teamId: draft.teamId, userId: saved.id });
+          nextTeams = nextTeams.map((t) =>
+            t.id === draft.teamId
+              ? { ...t, teamMembers: [...(t.teamMembers ?? []), membership] }
+              : t
+          );
+        }
+        setTeams(nextTeams);
+      }
+
       setUsers((prev) => {
         const exists = prev.some((u) => u.id === saved.id);
         return exists
@@ -157,6 +210,26 @@ export default function UsersPage() {
     }
   }
 
+  async function handleDecision(id: string, statusName: "Approved" | "Rejected") {
+    const status = userStatuses.find((s) => s.name === statusName);
+    if (!status) {
+      toast.error(`"${statusName}" status is not configured.`);
+      return;
+    }
+    setDecidingId(id);
+    try {
+      const saved = await updateUser(id, { userStatusId: status.id }, INCLUDE);
+      setUsers((prev) => prev.map((u) => (u.id === saved.id ? saved : u)));
+      toast.success(
+        statusName === "Approved" ? "User approved." : "Signup request rejected."
+      );
+    } catch (error) {
+      toast.error(errorMessage(error, "Failed to update approval status."));
+    } finally {
+      setDecidingId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageActions>
@@ -175,6 +248,7 @@ export default function UsersPage() {
         <UserEditorCard
           draft={draft}
           roles={roles}
+          teams={teams}
           saving={saving}
           onChange={setDraft}
           onCancel={() => setDraft(null)}
@@ -185,43 +259,80 @@ export default function UsersPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <UserCardSkeleton key={i} />)
-          : users.map((user) => (
-              <Card key={user.id}>
-                <CardContent className="space-y-2">
-                  <p className="truncate text-sm font-semibold">{user.name}</p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {user.email}
-                  </p>
-                  {user.jobTitle ? (
+          : users.map((user) => {
+              const isPending = user.userStatus?.name === PENDING_APPROVAL;
+              const userTeam = teams.find((t) =>
+                (t.teamMembers ?? []).some((tm) => tm.userId === user.id)
+              );
+              return (
+                <Card key={user.id}>
+                  <CardContent className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="min-w-0 truncate text-sm font-semibold">
+                        {user.name}
+                      </p>
+                      {isPending ? (
+                        <span className="bg-warning/15 text-warning shrink-0 rounded-full px-2 py-0.5 text-xs font-medium">
+                          Pending approval
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="text-muted-foreground truncate text-xs">
-                      {user.jobTitle}
+                      {user.email}
                     </p>
-                  ) : null}
-                  <p className="text-muted-foreground text-xs">
-                    {user.role?.name ?? "Unknown role"} ·{" "}
-                    {user.isActive ? "Active" : "Disabled"}
-                  </p>
-                  <div className="flex gap-2 pt-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setDraft(draftFromUser(user))}
-                    >
-                      <Pencil className="size-3.5" />
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(user.id)}
-                    >
-                      <Trash2 className="size-3.5" />
-                      Remove
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    {user.jobTitle ? (
+                      <p className="text-muted-foreground truncate text-xs">
+                        {user.jobTitle}
+                      </p>
+                    ) : null}
+                    <p className="text-muted-foreground text-xs">
+                      {user.role?.name ?? "Unknown role"} ·{" "}
+                      {user.isActive ? "Active" : "Disabled"}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Team: {userTeam?.name ?? "Unassigned"}
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {isPending ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => handleDecision(user.id, "Approved")}
+                            disabled={decidingId === user.id}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDecision(user.id, "Rejected")}
+                            disabled={decidingId === user.id}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setDraft(draftFromUser(user, teams))}
+                      >
+                        <Pencil className="size-3.5" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDelete(user.id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
       </div>
     </div>
   );
