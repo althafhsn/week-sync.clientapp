@@ -1,1 +1,10 @@
 export { cn } from "cn"
+
+/** First letter of the first and last words of a name, e.g. "Jane Doe" -> "JD". */
+export function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/)
+  return (
+    (parts[0]?.[0] ?? "") +
+    (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")
+  ).toUpperCase()
+}

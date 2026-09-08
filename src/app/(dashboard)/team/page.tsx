@@ -10,10 +10,18 @@ import { ReportTable } from "@/components/ReportTable";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TeamAnalytics } from "@/components/TeamAnalytics";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { weekLabel } from "@/lib/demo-data";
 import { useLookups, useStore } from "@/lib/store";
+import { initialsOf } from "@/lib/utils";
 import { listUsers, updateUser } from "@/lib/api/users-client";
 import { listUserStatuses } from "@/lib/api/user-statuses-client";
 import type { User as ApiUser, UserStatus } from "@/lib/api/types";
@@ -232,23 +240,33 @@ export default function TeamDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Team status</CardTitle>
+            <CardAction>
+              <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+                This week
+              </span>
+            </CardAction>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="max-h-72 space-y-0.5 overflow-y-auto">
             {teamStatus.map(({ member, latest }) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between gap-2"
+                className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5 hover:bg-muted/50"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{member.name}</p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {member.team}
-                  </p>
-                </div>
+                <Avatar size="sm" className="shrink-0">
+                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                    {initialsOf(member.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <p className="min-w-0 flex-1 truncate text-sm">
+                  <span className="font-medium">{member.name}</span>
+                  {member.team ? (
+                    <span className="text-muted-foreground"> · {member.team}</span>
+                  ) : null}
+                </p>
                 {latest ? (
-                  <StatusBadge status={latest.status} />
+                  <StatusBadge status={latest.status} className="h-5 px-2 text-[0.7rem]" />
                 ) : (
-                  <span className="text-muted-foreground text-xs">
+                  <span className="text-muted-foreground shrink-0 rounded-full border border-dashed border-border px-2 py-0.5 text-[0.7rem]">
                     No report
                   </span>
                 )}

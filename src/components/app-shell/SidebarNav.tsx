@@ -1,8 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { activeHrefFor, navForRole } from "@/components/app-shell/nav-config";
@@ -21,14 +21,22 @@ export function SidebarNav({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 px-5 py-5">
-        <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <Sparkles className="size-4.5" />
-        </span>
+      <Link
+        href={items[0]?.href ?? "/"}
+        onClick={onNavigate}
+        className="flex items-center gap-2 px-5 py-5"
+      >
+        <Image
+          src="/logo.svg"
+          alt=""
+          width={32}
+          height={32}
+          className="size-8 shrink-0 rounded-lg"
+        />
         <span className="text-sm font-semibold tracking-tight">
-          Weekly Review Hub
+          Week Sync
         </span>
-      </div>
+      </Link>
 
       <nav className="flex-1 space-y-1 px-3">
         {items.map((item) => {

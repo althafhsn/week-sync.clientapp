@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   createProject,
   deleteProject,
+  listProjects,
   listProjectsPage,
   updateProject,
 } from "@/lib/api/projects-client";
@@ -27,7 +28,6 @@ import { listTeams } from "@/lib/api/teams-client";
 import type { Project, ProjectStatus, Team, User } from "@/lib/api/types";
 
 const INCLUDE = ["users", "teams", "projectStatus"];
-const PAGE_SIZE = 8;
 
 function blankDraft(defaultStatusId: number | null): ProjectDraft {
   return {
@@ -81,6 +81,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState("6");
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [statuses, setStatuses] = useState<ProjectStatus[]>([]);
@@ -93,21 +94,34 @@ export default function ProjectsPage() {
     description: "Manage the projects and categories teams report against.",
   });
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageCount =
+    pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / Number(pageSize)));
 
-  const loadProjects = useCallback((pageToLoad: number) => {
-    return listProjectsPage(pageToLoad, PAGE_SIZE, INCLUDE).then((result) => {
+  const loadProjects = useCallback((pageToLoad: number, size: string) => {
+    if (size === "all") {
+      return listProjects(INCLUDE).then((data) => {
+        setProjects(data);
+        setTotal(data.length);
+      });
+    }
+    return listProjectsPage(pageToLoad, Number(size), INCLUDE).then((result) => {
       setProjects(result.data);
       setTotal(result.count);
     });
   }, []);
+
+  // Any page-size change invalidates the current page number.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [pageSize]);
 
   useEffect(() => {
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([
-      loadProjects(page),
+      loadProjects(page, pageSize),
       listUsers(),
       listProjectStatuses(),
       listTeams(),
@@ -127,7 +141,7 @@ export default function ProjectsPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, loadProjects]);
+  }, [page, pageSize, loadProjects]);
 
   async function handleSave() {
     if (!draft || !draft.name.trim() || draft.projectStatusId == null || saving) {
@@ -148,7 +162,7 @@ export default function ProjectsPage() {
       } else {
         await createProject(payload, INCLUDE);
       }
-      await loadProjects(page);
+      await loadProjects(page, pageSize);
       setDraft(null);
     } catch (error) {
       toast.error(errorMessage(error, "Failed to save project."));
@@ -162,11 +176,12 @@ export default function ProjectsPage() {
       await deleteProject(id);
       // Dropping the last row on a page beyond the first steps back a page
       // instead of leaving the view stranded on now-empty results.
-      const targetPage = projects.length === 1 && page > 1 ? page - 1 : page;
+      const targetPage =
+        pageSize !== "all" && projects.length === 1 && page > 1 ? page - 1 : page;
       if (targetPage !== page) {
         setPage(targetPage);
       } else {
-        await loadProjects(targetPage);
+        await loadProjects(targetPage, pageSize);
       }
     } catch (error) {
       toast.error(errorMessage(error, "Failed to delete project."));
@@ -202,7 +217,7 @@ export default function ProjectsPage() {
 
       {loading ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: pageSize === "all" ? 6 : Number(pageSize) }).map((_, i) => (
             <ProjectCardSkeleton key={i} />
           ))}
         </div>
@@ -254,7 +269,14 @@ export default function ProjectsPage() {
       )}
 
       {!loading ? (
-        <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+        <PaginationControls
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          pageSizeOptions={["5", "6", "10", "25", "50", "all"]}
+          onPageSizeChange={setPageSize}
+        />
       ) : null}
     </div>
   );

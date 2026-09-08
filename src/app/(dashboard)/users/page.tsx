@@ -19,6 +19,7 @@ import { createTeamMember, deleteTeamMember } from "@/lib/api/team-members-clien
 import {
   createUser,
   deleteUser,
+  listUsers,
   listUsersPage,
   updateUser,
 } from "@/lib/api/users-client";
@@ -26,7 +27,6 @@ import type { Role, Team, User, UserStatus } from "@/lib/api/types";
 
 const INCLUDE = ["role", "userStatus"];
 const PENDING_APPROVAL = "Pending Approval";
-const PAGE_SIZE = 9;
 
 function blankDraft(defaultRoleId: number | null): UserDraft {
   return {
@@ -91,6 +91,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState("9");
   const [roles, setRoles] = useState<Role[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
@@ -104,21 +105,34 @@ export default function UsersPage() {
     description: "Invite team members and managers, and assign roles.",
   });
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageCount =
+    pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / Number(pageSize)));
 
-  const loadUsers = useCallback((pageToLoad: number) => {
-    return listUsersPage(pageToLoad, PAGE_SIZE, INCLUDE).then((result) => {
+  const loadUsers = useCallback((pageToLoad: number, size: string) => {
+    if (size === "all") {
+      return listUsers(INCLUDE).then((data) => {
+        setUsers(data);
+        setTotal(data.length);
+      });
+    }
+    return listUsersPage(pageToLoad, Number(size), INCLUDE).then((result) => {
       setUsers(result.data);
       setTotal(result.count);
     });
   }, []);
+
+  // Any page-size change invalidates the current page number.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [pageSize]);
 
   useEffect(() => {
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([
-      loadUsers(page),
+      loadUsers(page, pageSize),
       listRoles(),
       listUserStatuses(),
       listTeams(["members"]),
@@ -136,7 +150,7 @@ export default function UsersPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, loadUsers]);
+  }, [page, pageSize, loadUsers]);
 
   async function handleSave() {
     if (
@@ -201,7 +215,7 @@ export default function UsersPage() {
         setTeams(nextTeams);
       }
 
-      await loadUsers(page);
+      await loadUsers(page, pageSize);
       setDraft(null);
     } catch (error) {
       toast.error(errorMessage(error, "Failed to save user."));
@@ -213,11 +227,12 @@ export default function UsersPage() {
   async function handleDelete(id: string) {
     try {
       await deleteUser(id);
-      const targetPage = users.length === 1 && page > 1 ? page - 1 : page;
+      const targetPage =
+        pageSize !== "all" && users.length === 1 && page > 1 ? page - 1 : page;
       if (targetPage !== page) {
         setPage(targetPage);
       } else {
-        await loadUsers(targetPage);
+        await loadUsers(targetPage, pageSize);
       }
     } catch (error) {
       toast.error(errorMessage(error, "Failed to delete user."));
@@ -233,7 +248,7 @@ export default function UsersPage() {
     setDecidingId(id);
     try {
       await updateUser(id, { userStatusId: status.id }, INCLUDE);
-      await loadUsers(page);
+      await loadUsers(page, pageSize);
       toast.success(
         statusName === "Approved" ? "User approved." : "Signup request rejected."
       );
@@ -272,7 +287,9 @@ export default function UsersPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading
-          ? Array.from({ length: 3 }).map((_, i) => <UserCardSkeleton key={i} />)
+          ? Array.from({ length: pageSize === "all" ? 9 : Number(pageSize) }).map((_, i) => (
+              <UserCardSkeleton key={i} />
+            ))
           : users.map((user) => {
               const isPending = user.userStatus?.name === PENDING_APPROVAL;
               const userTeam = teams.find((t) =>
@@ -350,7 +367,14 @@ export default function UsersPage() {
       </div>
 
       {!loading ? (
-        <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+        <PaginationControls
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          pageSizeOptions={["5", "9", "10", "25", "50", "all"]}
+          onPageSizeChange={setPageSize}
+        />
       ) : null}
     </div>
   );

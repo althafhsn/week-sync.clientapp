@@ -12,11 +12,9 @@ import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { apiReportToWeeklyReport } from "@/lib/api/mappers";
 import { findReportStatusId } from "@/lib/api/report-status";
-import { listReportsPage } from "@/lib/api/reports-client";
+import { listReports, listReportsPage } from "@/lib/api/reports-client";
 import { useStore } from "@/lib/store";
 import { STATUS_LABEL, type ReportStatus, type WeeklyReport } from "@/lib/types";
-
-const PAGE_SIZE = 10;
 
 export default function ReportHistoryPage() {
   const { currentUser, projects, reportStatuses, hydrated, signedIn } = useStore();
@@ -32,6 +30,7 @@ export default function ReportHistoryPage() {
   const [weekStart, setWeekStart] = useState("");
   const [weekEnd, setWeekEnd] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState("10");
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
   const [total, setTotal] = useState(0);
@@ -40,7 +39,7 @@ export default function ReportHistoryPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
-  }, [status, projectId, weekStart, weekEnd]);
+  }, [status, projectId, weekStart, weekEnd, pageSize]);
 
   useEffect(() => {
     if (!hydrated || !signedIn || !currentUser) return;
@@ -49,20 +48,22 @@ export default function ReportHistoryPage() {
     setLoading(true);
     const reportStatusId =
       status === "all" ? undefined : findReportStatusId(reportStatuses, status as ReportStatus);
+    const filters = {
+      // A manager's own report history must stay scoped to themself —
+      // the backend only auto-restricts non-manager callers.
+      userId: currentUser.id,
+      projectId: projectId === "all" ? undefined : projectId,
+      reportStatusId,
+      startDate: weekStart || undefined,
+      endDate: weekEnd || undefined,
+    };
 
-    listReportsPage(
-      {
-        // A manager's own report history must stay scoped to themself —
-        // the backend only auto-restricts non-manager callers.
-        userId: currentUser.id,
-        projectId: projectId === "all" ? undefined : projectId,
-        reportStatusId,
-        startDate: weekStart || undefined,
-        endDate: weekEnd || undefined,
-      },
-      page,
-      PAGE_SIZE
-    )
+    const request =
+      pageSize === "all"
+        ? listReports(undefined, filters).then((data) => ({ data, count: data.length }))
+        : listReportsPage(filters, page, Number(pageSize));
+
+    request
       .then((result) => {
         if (cancelled) return;
         setReports(result.data.map(apiReportToWeeklyReport));
@@ -75,7 +76,18 @@ export default function ReportHistoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [hydrated, signedIn, currentUser, status, projectId, weekStart, weekEnd, page, reportStatuses]);
+  }, [
+    hydrated,
+    signedIn,
+    currentUser,
+    status,
+    projectId,
+    weekStart,
+    weekEnd,
+    page,
+    pageSize,
+    reportStatuses,
+  ]);
 
   // The backend has no full-text search filter, so search narrows only the
   // page of results already fetched from the API.
@@ -91,7 +103,8 @@ export default function ReportHistoryPage() {
     });
   }, [reports, search, projects]);
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageCount =
+    pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / Number(pageSize)));
 
   const filters: FilterConfig[] = [
     {
@@ -148,9 +161,23 @@ export default function ReportHistoryPage() {
       <p className="text-muted-foreground text-sm">
         {total} report{total === 1 ? "" : "s"} found
       </p>
-      <ReportTable reports={filtered} mode="member" loading={loading} />
+      <ReportTable
+        reports={filtered}
+        mode="member"
+        loading={loading}
+        skeletonRows={pageSize === "all" ? 10 : Number(pageSize)}
+        paginated
+      />
       {!loading ? (
-        <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+        <div className="bg-background sticky bottom-0 border-t border-border pt-2">
+          <PaginationControls
+            page={page}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       ) : null}
     </div>
   );

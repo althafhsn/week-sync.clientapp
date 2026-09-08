@@ -8,17 +8,15 @@ import { ReportTable } from "@/components/ReportTable";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { apiReportToWeeklyReport } from "@/lib/api/mappers";
 import { findReportStatusId } from "@/lib/api/report-status";
-import { listReportsPage } from "@/lib/api/reports-client";
+import { listReports, listReportsPage } from "@/lib/api/reports-client";
 import { useStore } from "@/lib/store";
 import { STATUS_LABEL, type ReportStatus, type WeeklyReport } from "@/lib/types";
-
-const PAGE_SIZE = 10;
 
 export default function TeamReportsPage() {
   const { members, projects, reportStatuses, hydrated, signedIn } = useStore();
 
   usePageHeader({
-    title: "Team reports",
+    title: "Reports",
     description:
       "Search and filter all team reports by member, project, status, and reporting week.",
   });
@@ -30,6 +28,7 @@ export default function TeamReportsPage() {
   const [weekStart, setWeekStart] = useState("");
   const [weekEnd, setWeekEnd] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState("10");
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
   const [total, setTotal] = useState(0);
@@ -38,7 +37,7 @@ export default function TeamReportsPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
-  }, [memberId, projectId, status, weekStart, weekEnd]);
+  }, [memberId, projectId, status, weekStart, weekEnd, pageSize]);
 
   useEffect(() => {
     if (!hydrated || !signedIn) return;
@@ -47,18 +46,20 @@ export default function TeamReportsPage() {
     setLoading(true);
     const reportStatusId =
       status === "all" ? undefined : findReportStatusId(reportStatuses, status as ReportStatus);
+    const filters = {
+      userId: memberId === "all" ? undefined : memberId,
+      projectId: projectId === "all" ? undefined : projectId,
+      reportStatusId,
+      startDate: weekStart || undefined,
+      endDate: weekEnd || undefined,
+    };
 
-    listReportsPage(
-      {
-        userId: memberId === "all" ? undefined : memberId,
-        projectId: projectId === "all" ? undefined : projectId,
-        reportStatusId,
-        startDate: weekStart || undefined,
-        endDate: weekEnd || undefined,
-      },
-      page,
-      PAGE_SIZE
-    )
+    const request =
+      pageSize === "all"
+        ? listReports(undefined, filters).then((data) => ({ data, count: data.length }))
+        : listReportsPage(filters, page, Number(pageSize));
+
+    request
       .then((result) => {
         if (cancelled) return;
         setReports(result.data.map(apiReportToWeeklyReport));
@@ -71,7 +72,18 @@ export default function TeamReportsPage() {
     return () => {
       cancelled = true;
     };
-  }, [hydrated, signedIn, memberId, projectId, status, weekStart, weekEnd, page, reportStatuses]);
+  }, [
+    hydrated,
+    signedIn,
+    memberId,
+    projectId,
+    status,
+    weekStart,
+    weekEnd,
+    page,
+    pageSize,
+    reportStatuses,
+  ]);
 
   // The backend has no full-text search filter, so search narrows only the
   // page of results already fetched from the API.
@@ -89,7 +101,8 @@ export default function TeamReportsPage() {
     });
   }, [reports, search, members, projects]);
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageCount =
+    pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / Number(pageSize)));
 
   const filters: FilterConfig[] = [
     {
@@ -143,9 +156,24 @@ export default function TeamReportsPage() {
       <p className="text-muted-foreground text-sm">
         {total} report{total === 1 ? "" : "s"} found
       </p>
-      <ReportTable reports={filtered} mode="manager" showMember loading={loading} />
+      <ReportTable
+        reports={filtered}
+        mode="manager"
+        showMember
+        loading={loading}
+        skeletonRows={pageSize === "all" ? 10 : Number(pageSize)}
+        paginated
+      />
       {!loading ? (
-        <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+        <div className="bg-background sticky bottom-0 border-t border-border pt-2">
+          <PaginationControls
+            page={page}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       ) : null}
     </div>
   );

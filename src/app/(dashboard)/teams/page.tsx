@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   createTeam,
   deleteTeam,
+  listTeams,
   listTeamsPage,
   updateTeam,
 } from "@/lib/api/teams-client";
@@ -21,7 +22,6 @@ import { listUsers } from "@/lib/api/users-client";
 import type { Team, User } from "@/lib/api/types";
 
 const INCLUDE = ["members"];
-const PAGE_SIZE = 9;
 
 function blankDraft(): TeamDraft {
   return {
@@ -64,6 +64,7 @@ export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState("12");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -74,20 +75,33 @@ export default function TeamsPage() {
     description: "Group users into teams and share project access across them.",
   });
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageCount =
+    pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / Number(pageSize)));
 
-  const loadTeams = useCallback((pageToLoad: number) => {
-    return listTeamsPage(pageToLoad, PAGE_SIZE, INCLUDE).then((result) => {
+  const loadTeams = useCallback((pageToLoad: number, size: string) => {
+    if (size === "all") {
+      return listTeams(INCLUDE).then((data) => {
+        setTeams(data);
+        setTotal(data.length);
+      });
+    }
+    return listTeamsPage(pageToLoad, Number(size), INCLUDE).then((result) => {
       setTeams(result.data);
       setTotal(result.count);
     });
   }, []);
 
+  // Any page-size change invalidates the current page number.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [pageSize]);
+
   useEffect(() => {
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    Promise.all([loadTeams(page), listUsers()])
+    Promise.all([loadTeams(page, pageSize), listUsers()])
       .then(([, userList]) => {
         if (cancelled) return;
         setUsers(userList);
@@ -99,7 +113,7 @@ export default function TeamsPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, loadTeams]);
+  }, [page, pageSize, loadTeams]);
 
   async function handleSave() {
     if (!draft || !draft.name.trim() || saving) {
@@ -117,7 +131,7 @@ export default function TeamsPage() {
       } else {
         await createTeam(payload, INCLUDE);
       }
-      await loadTeams(page);
+      await loadTeams(page, pageSize);
       setDraft(null);
     } catch (error) {
       toast.error(errorMessage(error, "Failed to save team."));
@@ -129,11 +143,12 @@ export default function TeamsPage() {
   async function handleDelete(id: string) {
     try {
       await deleteTeam(id);
-      const targetPage = teams.length === 1 && page > 1 ? page - 1 : page;
+      const targetPage =
+        pageSize !== "all" && teams.length === 1 && page > 1 ? page - 1 : page;
       if (targetPage !== page) {
         setPage(targetPage);
       } else {
-        await loadTeams(targetPage);
+        await loadTeams(targetPage, pageSize);
       }
     } catch (error) {
       toast.error(errorMessage(error, "Failed to delete team."));
@@ -167,7 +182,9 @@ export default function TeamsPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading
-          ? Array.from({ length: 3 }).map((_, i) => <TeamCardSkeleton key={i} />)
+          ? Array.from({ length: pageSize === "all" ? 12 : Number(pageSize) }).map((_, i) => (
+              <TeamCardSkeleton key={i} />
+            ))
           : teams.map((team) => {
               const memberCount = team.teamMembers?.length ?? 0;
               return (
@@ -203,7 +220,14 @@ export default function TeamsPage() {
       </div>
 
       {!loading ? (
-        <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+        <PaginationControls
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          pageSizeOptions={["5", "10", "12", "25", "50", "all"]}
+          onPageSizeChange={setPageSize}
+        />
       ) : null}
     </div>
   );

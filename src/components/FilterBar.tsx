@@ -2,6 +2,7 @@
 
 import { SearchIcon, XIcon } from "lucide-react";
 
+import { DateRangeField } from "@/components/DateRangeField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,8 +44,8 @@ export function FilterBar({
   onReset: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative min-w-[200px] flex-1">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="relative w-full sm:min-w-[200px] sm:flex-1">
         <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
         <Input
           value={search}
@@ -54,61 +55,58 @@ export function FilterBar({
         />
       </div>
 
-      {filters.map((filter) => (
-        <Select
-          key={filter.id}
-          items={[
-            { value: "all", label: `All ${filter.label}` },
-            ...filter.options,
-          ]}
-          value={filter.value}
-          onValueChange={(value) => filter.onChange(value as string)}
+      {/* Below sm: 2-column grid. At sm+, `contents` drops the grid so these
+       * children flow directly into the parent's flex-wrap row. */}
+      <div className="grid grid-cols-2 gap-2 sm:contents">
+        {filters.map((filter) => (
+          <Select
+            key={filter.id}
+            items={[
+              { value: "all", label: `All ${filter.label}` },
+              ...filter.options,
+            ]}
+            value={filter.value}
+            onValueChange={(value) => filter.onChange(value as string)}
+          >
+            <SelectTrigger className="h-10 w-full sm:w-auto sm:min-w-[180px]">
+              <SelectValue>
+                {filter.value === "all"
+                  ? `All ${filter.label}`
+                  : (filter.options.find((o) => o.value === filter.value)?.label ??
+                    `All ${filter.label}`)}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All {filter.label}</SelectItem>
+              {filter.options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ))}
+
+        {dateRange ? (
+          <DateRangeField
+            className="w-full sm:w-auto"
+            startValue={dateRange.startValue}
+            endValue={dateRange.endValue}
+            onStartChange={dateRange.onStartChange}
+            onEndChange={dateRange.onEndChange}
+          />
+        ) : null}
+
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 w-full sm:w-auto"
+          onClick={onReset}
         >
-          <SelectTrigger className="h-10 w-auto min-w-[180px]">
-            <SelectValue>
-              {filter.value === "all"
-                ? `All ${filter.label}`
-                : (filter.options.find((o) => o.value === filter.value)?.label ??
-                  `All ${filter.label}`)}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All {filter.label}</SelectItem>
-            {filter.options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ))}
-
-      {dateRange ? (
-        <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            value={dateRange.startValue}
-            onChange={(event) => dateRange.onStartChange(event.target.value)}
-            max={dateRange.endValue || undefined}
-            aria-label="Start date"
-            className="h-10 w-auto"
-          />
-          <span className="text-muted-foreground text-sm">to</span>
-          <Input
-            type="date"
-            value={dateRange.endValue}
-            onChange={(event) => dateRange.onEndChange(event.target.value)}
-            min={dateRange.startValue || undefined}
-            aria-label="End date"
-            className="h-10 w-auto"
-          />
-        </div>
-      ) : null}
-
-      <Button type="button" variant="outline" className="h-10" onClick={onReset}>
-        <XIcon className="size-4" />
-        Clear
-      </Button>
+          <XIcon className="size-4" />
+          Clear
+        </Button>
+      </div>
     </div>
   );
 }

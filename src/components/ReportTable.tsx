@@ -15,7 +15,12 @@ import { useLookups } from "@/lib/store";
 import { totalHours, type WeeklyReport } from "@/lib/types";
 import { weekLabel } from "@/lib/demo-data";
 
-const SKELETON_ROWS = 5;
+const DEFAULT_SKELETON_ROWS = 5;
+
+// Header (2.5rem) + 10 rows (2.5rem each) — the desktop table always
+// reserves this much height so the pagination bar sits in a fixed spot
+// beneath it, whether the page has 1 row or 50.
+const DESKTOP_TABLE_HEIGHT = "h-110";
 
 function actionFor(report: WeeklyReport, mode: "member" | "manager") {
   if (mode === "member") {
@@ -27,12 +32,20 @@ function actionFor(report: WeeklyReport, mode: "member" | "manager") {
   };
 }
 
-function ReportTableSkeleton({ showMember }: { showMember: boolean }) {
+function ReportTableSkeleton({
+  showMember,
+  rows,
+  paginated,
+}: {
+  showMember: boolean;
+  rows: number;
+  paginated: boolean;
+}) {
   return (
     <>
       {/* Stacked cards below sm */}
       <div className="space-y-3 sm:hidden">
-        {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+        {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1 space-y-1.5">
@@ -51,9 +64,11 @@ function ReportTableSkeleton({ showMember }: { showMember: boolean }) {
       </div>
 
       {/* Table at sm and up */}
-      <div className="hidden sm:block">
+      <div
+        className={`hidden overflow-y-auto rounded-lg border border-border sm:block ${paginated ? DESKTOP_TABLE_HEIGHT : ""}`}
+      >
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-card sticky top-0 z-10">
             <TableRow>
               <TableHead>Week</TableHead>
               {showMember ? <TableHead>Member</TableHead> : null}
@@ -65,7 +80,7 @@ function ReportTableSkeleton({ showMember }: { showMember: boolean }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+            {Array.from({ length: rows }).map((_, i) => (
               <TableRow key={i}>
                 <TableCell>
                   <Skeleton className="h-4 w-24" />
@@ -104,21 +119,40 @@ export function ReportTable({
   mode,
   showMember = false,
   loading = false,
+  skeletonRows = DEFAULT_SKELETON_ROWS,
+  paginated = false,
 }: {
   reports: WeeklyReport[];
   mode: "member" | "manager";
   showMember?: boolean;
   loading?: boolean;
+  /** Row count for the loading skeleton — pass the active page size so the
+   * placeholder matches the shape of the results about to land. */
+  skeletonRows?: number;
+  /** Reserve a fixed height for a full page of results, so a page-size
+   * control's pagination bar sits in a consistent spot regardless of how
+   * many rows the current page actually has. Only meaningful for pages
+   * with their own pagination controls — a plain top-N list (dashboard,
+   * "ready for review", ...) should size to its own content instead. */
+  paginated?: boolean;
 }) {
   const { userName, projectName } = useLookups();
 
   if (loading) {
-    return <ReportTableSkeleton showMember={showMember} />;
+    return (
+      <ReportTableSkeleton
+        showMember={showMember}
+        rows={skeletonRows}
+        paginated={paginated}
+      />
+    );
   }
 
   if (reports.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-lg border border-dashed py-10 text-center text-sm">
+      <div
+        className={`text-muted-foreground flex items-center justify-center rounded-lg border border-dashed py-10 text-center text-sm ${paginated ? "sm:h-110 sm:py-0" : ""}`}
+      >
         No reports to show.
       </div>
     );
@@ -127,7 +161,7 @@ export function ReportTable({
   return (
     <>
       {/* Stacked cards below sm */}
-      <div className="space-y-3 sm:hidden">
+      <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1 sm:hidden">
         {reports.map((report) => {
           const action = actionFor(report, mode);
           return (
@@ -170,9 +204,11 @@ export function ReportTable({
       </div>
 
       {/* Table at sm and up */}
-      <div className="hidden sm:block">
+      <div
+        className={`hidden overflow-y-auto rounded-lg border border-border sm:block ${paginated ? DESKTOP_TABLE_HEIGHT : ""}`}
+      >
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-card sticky top-0 z-10">
             <TableRow>
               <TableHead>Week</TableHead>
               {showMember ? <TableHead>Member</TableHead> : null}

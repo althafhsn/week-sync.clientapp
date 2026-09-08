@@ -18,12 +18,8 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { SidebarNav } from "@/components/app-shell/SidebarNav";
 import { useStore } from "@/lib/store";
+import { initialsOf } from "@/lib/utils";
 import type { PageHeaderValue } from "@/components/AppShell";
-
-function initialsOf(name: string) {
-  const parts = name.trim().split(/\s+/);
-  return (parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "");
-}
 
 export function Header({
   header,

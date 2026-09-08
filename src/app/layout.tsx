@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Weekly Review Hub",
+  title: "Week Sync",
   description: "Weekly reporting and review for teams.",
 };
 
