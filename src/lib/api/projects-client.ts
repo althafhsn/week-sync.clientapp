@@ -1,8 +1,8 @@
 import { apiFetch } from "@/lib/api/client-fetch";
+import { fetchAllPages } from "@/lib/api/pagination-fetch";
 import { cached, ENTITY_TTL_MS, invalidate } from "@/lib/api/request-cache";
 import type {
   CreateProjectRequest,
-  PaginatedResult,
   Project,
   UpdateProjectRequest,
 } from "@/lib/api/types";
@@ -30,14 +30,7 @@ export async function listProjects(
   filters?: ListProjectsFilters
 ): Promise<Project[]> {
   const path = `${CACHE_PREFIX}${listProjectsQuery(include, filters)}`;
-  return cached(
-    path,
-    async () => {
-      const result = await apiFetch<PaginatedResult<Project>>(path);
-      return result.data;
-    },
-    ENTITY_TTL_MS
-  );
+  return cached(path, () => fetchAllPages<Project>(path), ENTITY_TTL_MS);
 }
 
 export async function createProject(

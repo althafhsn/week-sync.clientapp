@@ -4,6 +4,7 @@ import type { CreateReportHighlightInput } from "./create-report-highlight-input
 import type { CreateReportHoursInput } from "./create-report-hours-input";
 
 export interface UpdateReportRequest {
+  projectId?: string;
   reportStatusId?: number;
   comment?: string;
   notes?: string;

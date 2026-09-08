@@ -54,7 +54,7 @@ export function SidebarNav({
       </nav>
 
       <div className="text-muted-foreground border-border border-t px-5 py-4 text-xs">
-        Prototype demo — data is stored locally in your browser.
+        Weekly Review Hub
       </div>
     </div>
   );

@@ -15,25 +15,30 @@ async function callBackend(path: string, init: RequestInit, token: string | null
   return fetch(`${process.env.API_BASE_URL}${path}`, { ...init, headers });
 }
 
-// Module-level so concurrent requests that all 401 around the same time
-// (e.g. a page fetching projects+users+statuses in parallel) share a single
-// refresh call instead of racing the single-use refresh token against
-// itself. Only coalesces within one Node process/instance.
-let refreshInFlight: Promise<string | null> | null = null;
+// Keyed by refresh token (unique per session) rather than a single
+// module-level promise: concurrent requests that all 401 around the same
+// time FOR THE SAME SESSION (e.g. a page fetching projects+users+statuses
+// in parallel) share one refresh call instead of racing the single-use
+// refresh token against itself, while concurrent requests from DIFFERENT
+// users' sessions each get their own in-flight refresh and never receive
+// another session's resolved access token. Only coalesces within one Node
+// process/instance.
+const refreshInFlightByToken = new Map<string, Promise<string | null>>();
 
-async function refreshAccessToken(): Promise<string | null> {
-  if (!refreshInFlight) {
-    refreshInFlight = doRefresh().finally(() => {
-      refreshInFlight = null;
-    });
+async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+  const existing = refreshInFlightByToken.get(refreshToken);
+  if (existing) {
+    return existing;
   }
-  return refreshInFlight;
+
+  const promise = doRefresh(refreshToken).finally(() => {
+    refreshInFlightByToken.delete(refreshToken);
+  });
+  refreshInFlightByToken.set(refreshToken, promise);
+  return promise;
 }
 
-async function doRefresh(): Promise<string | null> {
-  const refreshToken = await getRefreshToken();
-  if (!refreshToken) return null;
-
+async function doRefresh(refreshToken: string): Promise<string | null> {
   const body: RefreshTokenRequest = { refreshToken };
   const upstream = await fetch(`${process.env.API_BASE_URL}/auth/refresh`, {
     method: "POST",
@@ -59,9 +64,14 @@ export async function backendFetch(path: string, init: RequestInit = {}) {
     return response;
   }
 
-  const refreshedToken = await refreshAccessToken();
-  if (!refreshedToken) {
+  const refreshToken = await getRefreshToken();
+  if (!refreshToken) {
     return response; // no refresh available — bubble the original 401
+  }
+
+  const refreshedToken = await refreshAccessToken(refreshToken);
+  if (!refreshedToken) {
+    return response;
   }
 
   return callBackend(path, init, refreshedToken);

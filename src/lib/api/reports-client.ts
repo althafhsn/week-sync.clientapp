@@ -1,8 +1,8 @@
 import { apiFetch } from "@/lib/api/client-fetch";
+import { fetchAllPages } from "@/lib/api/pagination-fetch";
 import { cached, ENTITY_TTL_MS, invalidate } from "@/lib/api/request-cache";
 import type {
   CreateReportWithVersionRequest,
-  PaginatedResult,
   Report,
   ReportHistoryDetail,
   ReportHistoryEntry,
@@ -21,10 +21,13 @@ export const REPORT_INCLUDE = [
   "reportHours",
 ];
 
-// The list endpoint returns many rows at once, so it only pulls the status
-// lookup by default; callers that need the full nested shape (detail views,
-// create/update responses) use REPORT_INCLUDE instead.
-export const REPORT_LIST_INCLUDE = ["reportStatus"];
+// The list endpoint returns many rows at once, so it skips the heavier
+// nested relations (highlights, next-week tasks) by default; callers that
+// need the full nested shape (detail views, create/update responses) use
+// REPORT_INCLUDE instead. `tasks`/`reportHours` are still included here
+// because list rows (dashboard, history, report tables) display task/hour
+// counts and totals computed from them.
+export const REPORT_LIST_INCLUDE = ["reportStatus", "tasks", "reportHours"];
 
 export interface ListReportsFilters {
   userId?: string;
@@ -49,14 +52,7 @@ export async function listReports(
   filters?: ListReportsFilters
 ): Promise<Report[]> {
   const path = `${CACHE_PREFIX}${listReportsQuery(include, filters)}`;
-  return cached(
-    path,
-    async () => {
-      const result = await apiFetch<PaginatedResult<Report>>(path);
-      return result.data;
-    },
-    ENTITY_TTL_MS
-  );
+  return cached(path, () => fetchAllPages<Report>(path), ENTITY_TTL_MS);
 }
 
 export async function getReport(
@@ -99,20 +95,11 @@ export async function updateReport(
   return report;
 }
 
-// Past versions are only created when an edit lands while the report is
-// "Needs Correction" (see report.service.ts#archiveIfNeedsCorrection on the
-// backend), so this list is usually short — pull it in full rather than
-// paginating in the UI.
 export async function getReportHistory(id: string): Promise<ReportHistoryEntry[]> {
   const path = `${CACHE_PREFIX}/${id}/history`;
   return cached(
     path,
-    async () => {
-      const result = await apiFetch<PaginatedResult<ReportHistoryEntry>>(
-        `${path}?pageSize=100`
-      );
-      return result.data;
-    },
+    () => fetchAllPages<ReportHistoryEntry>(path),
     ENTITY_TTL_MS
   );
 }

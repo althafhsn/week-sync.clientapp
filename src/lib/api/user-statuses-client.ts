@@ -1,16 +1,11 @@
-import { apiFetch } from "@/lib/api/client-fetch";
+import { fetchAllPages } from "@/lib/api/pagination-fetch";
 import { cached, LOOKUP_TTL_MS } from "@/lib/api/request-cache";
-import type { PaginatedResult, UserStatus } from "@/lib/api/types";
+import type { UserStatus } from "@/lib/api/types";
 
 export async function listUserStatuses(): Promise<UserStatus[]> {
   return cached(
     "/api/user-statuses",
-    async () => {
-      const result = await apiFetch<PaginatedResult<UserStatus>>(
-        "/api/user-statuses"
-      );
-      return result.data;
-    },
+    () => fetchAllPages<UserStatus>("/api/user-statuses"),
     LOOKUP_TTL_MS
   );
 }

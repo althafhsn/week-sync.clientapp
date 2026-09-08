@@ -24,6 +24,23 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function toDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Monday of the actual current calendar week — matches the backend's
+// dashboard.service.ts#getSummary computation — rather than the latest week
+// any report happens to exist for.
+function currentWeekStartKey(): string {
+  const now = new Date();
+  const diffToMonday = (now.getDay() + 6) % 7;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+  return toDateKey(monday);
+}
+
 export default function TeamDashboardPage() {
   const { reports, members } = useStore();
   const { userName, projectName } = useLookups();
@@ -77,10 +94,7 @@ export default function TeamDashboardPage() {
   const approved = reports.filter((r) => r.status === "approved");
   const needsCorrection = reports.filter((r) => r.status === "needs_correction");
 
-  const distinctWeekStarts = Array.from(
-    new Set(reports.map((r) => r.weekStart))
-  ).sort();
-  const currentWeekStart = distinctWeekStarts.at(-1);
+  const currentWeekStart = currentWeekStartKey();
   const thisWeekReports = reports.filter(
     (r) => r.weekStart === currentWeekStart
   );
@@ -91,10 +105,10 @@ export default function TeamDashboardPage() {
     .slice(0, 5);
 
   const teamStatus = members.map((member) => {
-    const memberReports = reports
-      .filter((r) => r.memberId === member.id)
-      .sort((a, b) => b.weekStart.localeCompare(a.weekStart));
-    return { member, latest: memberReports[0] };
+    const currentWeekReport = reports.find(
+      (r) => r.memberId === member.id && r.weekStart === currentWeekStart
+    );
+    return { member, latest: currentWeekReport };
   });
 
   const latestReports = [...reports]

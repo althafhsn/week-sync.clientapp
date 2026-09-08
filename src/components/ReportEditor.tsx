@@ -176,7 +176,8 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
   }
 
   function patchHours(key: keyof HoursByType, value: number) {
-    setReport((prev) => ({ ...prev, hours: { ...prev.hours, [key]: value } }));
+    const clamped = Number.isNaN(value) ? 0 : Math.max(0, value);
+    setReport((prev) => ({ ...prev, hours: { ...prev.hours, [key]: clamped } }));
   }
 
   function updateTask(id: string, task: ReportTask) {
@@ -240,6 +241,7 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
     }).filter((h) => h.reportHourTypeId !== 0);
 
     return {
+      projectId: report.projectId,
       reportStatusId: status.id,
       notes: report.notes || undefined,
       startDate: report.weekStart,

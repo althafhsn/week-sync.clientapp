@@ -1,14 +1,11 @@
-import { apiFetch } from "@/lib/api/client-fetch";
+import { fetchAllPages } from "@/lib/api/pagination-fetch";
 import { cached, LOOKUP_TTL_MS } from "@/lib/api/request-cache";
-import type { PaginatedResult, Role } from "@/lib/api/types";
+import type { Role } from "@/lib/api/types";
 
 export async function listRoles(): Promise<Role[]> {
   return cached(
     "/api/roles",
-    async () => {
-      const result = await apiFetch<PaginatedResult<Role>>("/api/roles");
-      return result.data;
-    },
+    () => fetchAllPages<Role>("/api/roles"),
     LOOKUP_TTL_MS
   );
 }

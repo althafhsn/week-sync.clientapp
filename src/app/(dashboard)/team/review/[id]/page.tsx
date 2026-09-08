@@ -47,6 +47,7 @@ export default function ReviewReportPage() {
         // Drafts are the member's own unpublished working copy — a manager
         // can't view or review one, even by guessing/bookmarking its URL.
         setReport(mapped.status === "draft" ? null : mapped);
+        setComment(mapped.feedback[0]?.comment ?? "");
       })
       .catch(() => {
         if (!cancelled) setReport(null);
@@ -121,7 +122,10 @@ export default function ReviewReportPage() {
       toast.success(
         decision === "approved" ? "Report approved." : "Changes requested."
       );
-      setComment("");
+      // Reflect what was actually saved rather than blanking the box — the
+      // textarea becomes disabled right below, so this is the only place the
+      // manager can still see the comment they just recorded.
+      setComment(mapped.feedback[0]?.comment ?? comment.trim() ?? DEFAULT_APPROVAL_COMMENT);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to submit the review."

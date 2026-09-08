@@ -44,6 +44,20 @@ export function ReportWorkCard({
             </p>
           </div>
         ))}
+
+        {report.notes ? (
+          <div>
+            <p className="text-muted-foreground text-xs font-medium">Notes</p>
+            <p className="text-sm">{report.notes}</p>
+          </div>
+        ) : null}
+
+        {report.links ? (
+          <div>
+            <p className="text-muted-foreground text-xs font-medium">Links</p>
+            <p className="text-sm break-all">{report.links}</p>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

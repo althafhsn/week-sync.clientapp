@@ -1,8 +1,8 @@
 import { apiFetch } from "@/lib/api/client-fetch";
+import { fetchAllPages } from "@/lib/api/pagination-fetch";
 import { cached, ENTITY_TTL_MS, invalidate } from "@/lib/api/request-cache";
 import type {
   CreateUserRequest,
-  PaginatedResult,
   UpdateUserRequest,
   User,
 } from "@/lib/api/types";
@@ -15,14 +15,7 @@ function includeQuery(include?: string[]) {
 
 export async function listUsers(include?: string[]): Promise<User[]> {
   const path = `${CACHE_PREFIX}${includeQuery(include)}`;
-  return cached(
-    path,
-    async () => {
-      const result = await apiFetch<PaginatedResult<User>>(path);
-      return result.data;
-    },
-    ENTITY_TTL_MS
-  );
+  return cached(path, () => fetchAllPages<User>(path), ENTITY_TTL_MS);
 }
 
 export async function getUser(id: string, include?: string[]): Promise<User> {
