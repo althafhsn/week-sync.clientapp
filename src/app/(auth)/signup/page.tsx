@@ -126,7 +126,6 @@ export default function SignupPage() {
                   <PasswordInput
                     id="password"
                     autoComplete="new-password"
-                    placeholder="••••••••"
                     required
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
@@ -139,7 +138,6 @@ export default function SignupPage() {
                   <PasswordInput
                     id="confirmPassword"
                     autoComplete="new-password"
-                    placeholder="••••••••"
                     required
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}

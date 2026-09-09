@@ -209,11 +209,7 @@ export function UserEditorCard({
                   mustChangePassword: e.target.value ? true : draft.mustChangePassword,
                 })
               }
-              placeholder={
-                isEdit
-                  ? "Leave blank to keep current password"
-                  : "Generate or type a temporary password"
-              }
+              placeholder={reveal ? "Password" : "••••••••"}
             />
             <InputGroupAddon align="inline-end">
               <Tooltip>

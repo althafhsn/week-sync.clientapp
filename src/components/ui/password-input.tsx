@@ -13,12 +13,16 @@ import {
 export function PasswordInput({
   className,
   ...props
-}: Omit<React.ComponentProps<"input">, "type">) {
+}: Omit<React.ComponentProps<"input">, "type" | "placeholder">) {
   const [reveal, setReveal] = React.useState(false);
 
   return (
     <InputGroup className={className}>
-      <InputGroupInput type={reveal ? "text" : "password"} {...props} />
+      <InputGroupInput
+        {...props}
+        type={reveal ? "text" : "password"}
+        placeholder={reveal ? "Password" : "••••••••"}
+      />
       <InputGroupAddon align="inline-end">
         <InputGroupButton
           type="button"

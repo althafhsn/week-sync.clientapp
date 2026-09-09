@@ -133,7 +133,6 @@ export default function LoginPage() {
                   <PasswordInput
                     id="password"
                     autoComplete="current-password"
-                    placeholder="••••••••"
                     required
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}

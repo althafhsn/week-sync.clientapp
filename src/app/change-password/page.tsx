@@ -97,7 +97,6 @@ export default function ChangePasswordPage() {
               <PasswordInput
                 id="currentPassword"
                 autoComplete="current-password"
-                placeholder="••••••••"
                 required
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
@@ -110,7 +109,6 @@ export default function ChangePasswordPage() {
               <PasswordInput
                 id="newPassword"
                 autoComplete="new-password"
-                placeholder="••••••••"
                 required
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
@@ -123,7 +121,6 @@ export default function ChangePasswordPage() {
               <PasswordInput
                 id="confirmPassword"
                 autoComplete="new-password"
-                placeholder="••••••••"
                 required
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
