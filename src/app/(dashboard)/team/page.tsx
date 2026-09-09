@@ -10,6 +10,8 @@ import { ReportTable } from "@/components/ReportTable";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TeamAnalytics } from "@/components/TeamAnalytics";
+import { SearchIcon } from "lucide-react";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { weekLabel } from "@/lib/demo-data";
 import { useLookups, useStore } from "@/lib/store";
 import { initialsOf } from "@/lib/utils";
@@ -61,6 +64,7 @@ export default function TeamDashboardPage() {
   const [pendingUsers, setPendingUsers] = useState<ApiUser[]>([]);
   const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [memberSearch, setMemberSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +121,14 @@ export default function TeamDashboardPage() {
       (r) => r.memberId === member.id && r.weekStart === currentWeekStart
     );
     return { member, latest: currentWeekReport };
+  });
+  const visibleTeamStatus = teamStatus.filter(({ member }) => {
+    const query = memberSearch.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      member.name.toLowerCase().includes(query) ||
+      (member.team ?? "").toLowerCase().includes(query)
+    );
   });
 
   const latestReports = [...reports]
@@ -239,15 +251,36 @@ export default function TeamDashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Team status</CardTitle>
+            <CardTitle>
+              Member status{" "}
+              <span className="text-muted-foreground font-normal">
+                ({teamStatus.length})
+              </span>
+            </CardTitle>
             <CardAction>
               <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium">
                 This week
               </span>
             </CardAction>
           </CardHeader>
-          <CardContent className="max-h-72 space-y-0.5 overflow-y-auto">
-            {teamStatus.map(({ member, latest }) => (
+          <CardContent className="space-y-3">
+            <InputGroup className="h-9">
+              <InputGroupAddon align="inline-start">
+                <SearchIcon className="size-4" />
+              </InputGroupAddon>
+              <InputGroupInput
+                value={memberSearch}
+                onChange={(event) => setMemberSearch(event.target.value)}
+                placeholder="Search members…"
+              />
+            </InputGroup>
+            <div className="max-h-44 space-y-0.5 overflow-y-auto">
+            {visibleTeamStatus.length === 0 ? (
+              <p className="text-muted-foreground py-2 text-center text-sm">
+                No members match &quot;{memberSearch}&quot;.
+              </p>
+            ) : (
+            visibleTeamStatus.map(({ member, latest }) => (
               <div
                 key={member.id}
                 className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5 hover:bg-muted/50"
@@ -271,7 +304,9 @@ export default function TeamDashboardPage() {
                   </span>
                 )}
               </div>
-            ))}
+            ))
+            )}
+            </div>
           </CardContent>
         </Card>
       </div>
