@@ -103,3 +103,19 @@ npm run lint    # eslint
 - **Styling:** Tailwind CSS 4, `shadcn`-style components on top of Base UI primitives
 - **Charts:** Recharts
 - **Forms/dates:** `react-day-picker`, `date-fns`
+
+## Code Quality Improvements (`refactor/code-quality-improvements`)
+
+A duplication-reduction pass, branched off `master` (original branch untouched), extracted the following shared pieces without changing UI behavior:
+
+- **`getErrorMessage(error, fallback)`** (`src/lib/utils.ts`) — replaces 5 duplicated local functions and ~6 duplicated inline expressions across page components.
+- **`parseLocalDate`, `toIsoDate`, `formatDateLabel`** (`src/lib/date.ts`) — replaces near-identical date helpers previously copy-pasted in `demo-data.ts`, `DateField.tsx`, and `DateRangeField.tsx`.
+- **`randomId(prefix)`** (`src/lib/utils.ts`) — replaces 8 inline `Math.random().toString(36)...` call sites.
+- **`makeLookupClient<T>(path)`** (`src/lib/api/lookup-client-factory.ts`) — the 8 read-only lookup API clients (`priority-types-client.ts`, `roles-client.ts`, etc.) are now one-line instantiations of this factory instead of byte-identical files.
+- **`proxyGet(backendPath)`** (`src/lib/api/relay.ts`) — the 8 matching Next.js proxy routes under `src/app/api/*` shrank to a single line each.
+- **`<EntityPickerField>`** (`src/components/admin/EntityPickerField.tsx`) — the "chip list + searchable manage dialog" pattern, previously duplicated 3x across `ProjectEditorCard.tsx` and `TeamEditorCard.tsx`.
+- **`<AuthLayout>`** (`src/components/auth/AuthLayout.tsx`) — the shared showcase-panel/theme-toggle/centered-form shell used by `login`, `signup`, and `change-password` pages.
+- **`useReportListQuery`** (`src/lib/use-report-list-query.ts`) — the search/filter/pagination logic shared by `reports/page.tsx` and `team/reports/page.tsx` (~90% identical before this).
+- **`usePaginatedCrud`** (`src/lib/use-paginated-crud.ts`) — the pagination + "step back a page after deleting the last row" logic shared by `users/page.tsx`, `teams/page.tsx`, `projects/page.tsx`.
+
+Net effect: ~1,000 lines added, ~1,165 removed (net -159), `npm run build` and `npm run lint` both pass clean.
