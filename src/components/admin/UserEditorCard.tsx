@@ -23,7 +23,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { generateTempPassword } from "@/lib/password";
-import type { Role, Team } from "@/lib/api/types";
+import type { Role, Team, UserStatus } from "@/lib/api/types";
 
 export interface UserDraft {
   id: string | null;
@@ -33,6 +33,7 @@ export interface UserDraft {
   password: string; // new temp password; blank on edit means "leave unchanged"
   roleId: number | null;
   teamId: string | null;
+  userStatusId: number | null;
   mustChangePassword: boolean;
   isActive: boolean;
 }
@@ -43,6 +44,7 @@ export function UserEditorCard({
   draft,
   roles,
   teams,
+  statuses,
   saving,
   onChange,
   onCancel,
@@ -51,6 +53,7 @@ export function UserEditorCard({
   draft: UserDraft;
   roles: Role[];
   teams: Team[];
+  statuses: UserStatus[];
   saving: boolean;
   onChange: (draft: UserDraft) => void;
   onCancel: () => void;
@@ -129,18 +132,43 @@ export function UserEditorCard({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Active</Label>
-            <div className="flex h-10 items-center gap-2">
-              <Switch
-                checked={draft.isActive}
-                onCheckedChange={(checked) =>
-                  onChange({ ...draft, isActive: checked })
-                }
-              />
-              <span className="text-muted-foreground text-sm">
-                {draft.isActive ? "Account enabled" : "Account disabled"}
-              </span>
-            </div>
+            <Label>Approval status</Label>
+            <Select
+              items={statuses.map((s) => ({ value: s.id, label: s.name }))}
+              value={draft.userStatusId}
+              onValueChange={(value) =>
+                onChange({ ...draft, userStatusId: value ?? draft.userStatusId })
+              }
+            >
+              <SelectTrigger className="h-10 w-full">
+                <SelectValue>
+                  {statuses.find((s) => s.id === draft.userStatusId)?.name ??
+                    "Select a status"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Active</Label>
+          <div className="flex h-10 items-center gap-2">
+            <Switch
+              checked={draft.isActive}
+              onCheckedChange={(checked) =>
+                onChange({ ...draft, isActive: checked })
+              }
+            />
+            <span className="text-muted-foreground text-sm">
+              {draft.isActive ? "Account enabled" : "Account disabled"}
+            </span>
           </div>
         </div>
 

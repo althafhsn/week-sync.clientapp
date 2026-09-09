@@ -27,8 +27,9 @@ import type { Role, Team, User, UserStatus } from "@/lib/api/types";
 
 const INCLUDE = ["role", "userStatus"];
 const PENDING_APPROVAL = "Pending Approval";
+const APPROVED = "Approved";
 
-function blankDraft(defaultRoleId: number | null): UserDraft {
+function blankDraft(defaultRoleId: number | null, defaultStatusId: number | null): UserDraft {
   return {
     id: null,
     name: "",
@@ -37,6 +38,7 @@ function blankDraft(defaultRoleId: number | null): UserDraft {
     password: generateTempPassword(),
     roleId: defaultRoleId,
     teamId: null,
+    userStatusId: defaultStatusId,
     mustChangePassword: true,
     isActive: true,
   };
@@ -54,6 +56,7 @@ function draftFromUser(user: User, teams: Team[]): UserDraft {
     password: "",
     roleId: user.roleId,
     teamId: currentTeam?.id ?? null,
+    userStatusId: user.userStatusId ?? null,
     mustChangePassword: user.mustChangePassword,
     isActive: user.isActive,
   };
@@ -158,6 +161,7 @@ export default function UsersPage() {
       !draft.name.trim() ||
       !draft.email.trim() ||
       draft.roleId == null ||
+      draft.userStatusId == null ||
       saving
     ) {
       return;
@@ -172,6 +176,7 @@ export default function UsersPage() {
               email: draft.email.trim(),
               jobTitle: draft.jobTitle.trim() || undefined,
               roleId: draft.roleId,
+              userStatusId: draft.userStatusId,
               mustChangePassword: draft.mustChangePassword,
               isActive: draft.isActive,
               ...(draft.password ? { password: draft.password } : {}),
@@ -185,6 +190,7 @@ export default function UsersPage() {
               jobTitle: draft.jobTitle.trim() || undefined,
               password: draft.password,
               roleId: draft.roleId,
+              userStatusId: draft.userStatusId,
               mustChangePassword: draft.mustChangePassword,
             },
             INCLUDE
@@ -264,7 +270,14 @@ export default function UsersPage() {
       <PageActions>
         <Button
           size="sm"
-          onClick={() => setDraft(blankDraft(roles[0]?.id ?? null))}
+          onClick={() =>
+            setDraft(
+              blankDraft(
+                roles[0]?.id ?? null,
+                userStatuses.find((s) => s.name === APPROVED)?.id ?? null
+              )
+            )
+          }
           className="flex items-center gap-2 py-4"
           disabled={loading || roles.length === 0}
         >
@@ -278,6 +291,7 @@ export default function UsersPage() {
           draft={draft}
           roles={roles}
           teams={teams}
+          statuses={userStatuses}
           saving={saving}
           onChange={setDraft}
           onCancel={() => setDraft(null)}
