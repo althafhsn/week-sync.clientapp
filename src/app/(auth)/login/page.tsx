@@ -41,7 +41,7 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      const apiUser = await loginWithApi(email.trim(), password);
+      const apiUser = await loginWithApi(email.trim().toLowerCase(), password);
       const user = apiUserToUser(apiUser);
       const role: Role = user.role;
 
