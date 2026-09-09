@@ -1,1 +1,13 @@
 @AGENTS.md
+@AGENTS.md
+
+# Project working rules (Claude-authored, not auto-regenerated)
+
+- **500-line ceiling per file.** No component, hook, route handler, or module file should exceed ~500 lines. If a file is approaching or over that limit, stop and split it — extract sub-components, hooks, or helper modules into their own files instead of growing the file further.
+- **No duplicated logic/UI.** Before writing a new component, form field, table, chart wrapper, status badge, etc., search the codebase (`components/`, `lib/`) for something that already does it or is close enough to extend. Reuse or generalize existing pieces rather than copy-pasting and tweaking.
+- **Plan the split up front.** When a feature is clearly going to be large (e.g. the weekly report form, the manager dashboard), break it into smaller files/components as part of the initial design, rather than writing one big file and refactoring later.
+- **Shared primitives live in one place.** Cross-cutting UI (status badges, report field sections, table cells) belongs in `components/` as small reusable pieces; page files under `app/` should mostly compose these rather than contain large inline JSX blocks.
+- **Clickable elements get `cursor-pointer`.** Any interactive control (buttons, and anything acting like one) must show a pointer cursor on hover and `cursor-not-allowed` when disabled. This is handled centrally in `components/ui/button.tsx` — always build new clickable UI on top of the shared `Button` component instead of a bare `<div onClick>`/`<span onClick>`, so this stays correct in one place.
+- **`lib/demo-data.ts` and `lib/types.ts` are the single source of truth for domain data.** Never invent parallel hardcoded copies of users/projects/reports (e.g. a second "demo account" list with made-up titles) — import and reuse the seeded data so names, roles, and titles can't drift out of sync.
+- **New UI must respect the theme system.** Use semantic tokens (`bg-background`, `text-foreground`, `bg-card`, `bg-secondary`, etc. from `globals.css`) rather than hardcoded colors, so components react correctly to the light/dark `ThemeProvider` toggle. Only use the fixed-dark `sidebar` tokens when a panel is deliberately meant to stay dark regardless of theme.
+- **Verify theme/font/CSS var wiring actually renders, not just compiles.** A CSS custom property can reference itself or an undefined var and still build/lint clean while silently doing nothing (this happened with `--font-sans` pointing at itself). When adding or changing tokens, trace that each one is actually consumed somewhere, not just declared.

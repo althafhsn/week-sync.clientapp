@@ -85,8 +85,10 @@ Open [http://localhost:3000](http://localhost:3000) — if the API also runs on 
 ## Running the Full Stack Locally
 
 1. **Database** — start/point at a PostgreSQL instance.
-2. **Backend** — see [`week-sync.api` README](../week-sync.api/README.md): `npm install`, configure `.env`, `npx prisma migrate deploy`, `npm run start:dev`.
+2. **Backend** — see [`week-sync.api` README](../week-sync.api/README.md): `npm install`, configure `.env`, `npx prisma migrate deploy`, `npx prisma db seed` (creates roles/statuses and a bootstrap Manager account — see that README's "Seed data" section), `npm run start:dev`.
 3. **Frontend** — this repo: `npm install`, configure `.env.local` with `API_BASE_URL` pointing at the backend, `npm run dev`.
+4. **Log in** with the seeded Manager account (or sign up — new signups start as `Team Member` in `Pending Approval` until a Manager approves them at `/users`).
+
 
 ## Scripts
 
