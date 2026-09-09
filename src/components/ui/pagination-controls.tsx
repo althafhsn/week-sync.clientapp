@@ -24,6 +24,7 @@ export function PaginationControls({
   pageSize,
   pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   onPageSizeChange,
+  total,
 }: {
   page: number;
   pageCount: number;
@@ -33,12 +34,15 @@ export function PaginationControls({
   pageSize?: string;
   pageSizeOptions?: string[];
   onPageSizeChange?: (pageSize: string) => void;
+  /** Total row count across all pages. When provided, shown alongside "Page X of Y". */
+  total?: number;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
       <div className="flex items-center gap-3">
         <p className="text-muted-foreground text-xs">
           Page {page} of {pageCount}
+          {total != null ? ` · ${total} total` : ""}
         </p>
         {pageSize && onPageSizeChange ? (
           <div className="flex items-center gap-1.5">

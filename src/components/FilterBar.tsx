@@ -1,10 +1,15 @@
 "use client";
 
-import { SearchIcon, XIcon } from "lucide-react";
+import { SearchIcon, SparklesIcon, XIcon } from "lucide-react";
 
 import { DateRangeField } from "@/components/DateRangeField";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -12,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface FilterConfig {
   id: string;
@@ -31,13 +37,28 @@ export interface DateRangeFilterConfig {
 export function FilterBar({
   search,
   onSearchChange,
+  aiActive = false,
+  onAiSearch,
+  onExitAiMode,
   searchPlaceholder = "Search…",
   filters,
   dateRange,
   onReset,
 }: {
   search: string;
+  /** Every keystroke reaches this - while not in AI mode, the search box
+   * filters live, the same as it always has, with no AI involved. */
   onSearchChange: (value: string) => void;
+  /** Whether the bar is currently running in AI mode. Always shown as
+   * clickable, regardless of whether there's text typed yet. */
+  aiActive?: boolean;
+  /** Runs the current search text through AI search and switches the bar
+   * into AI mode. Triggered by the sparkle button (when not already active)
+   * or by pressing Enter. Omit to hide the AI button entirely. */
+  onAiSearch?: () => void;
+  /** Switches back to plain live filtering. Triggered by clicking the
+   * sparkle button again while already in AI mode. */
+  onExitAiMode?: () => void;
   searchPlaceholder?: string;
   filters: FilterConfig[];
   dateRange?: DateRangeFilterConfig;
@@ -45,14 +66,44 @@ export function FilterBar({
 }) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      <div className="relative w-full sm:min-w-[200px] sm:flex-1">
-        <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-        <Input
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={searchPlaceholder}
-          className="h-10 pl-8"
-        />
+      <div className="w-full sm:min-w-[200px] sm:flex-1">
+        <InputGroup className="h-10">
+          <InputGroupAddon align="inline-start">
+            <SearchIcon className="size-4" />
+          </InputGroupAddon>
+          <InputGroupInput
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") onAiSearch?.();
+            }}
+            placeholder={searchPlaceholder}
+          />
+          {onAiSearch ? (
+            <InputGroupAddon align="inline-end">
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <InputGroupButton
+                      type="button"
+                      size="icon-sm"
+                      variant={aiActive ? "secondary" : "ghost"}
+                      onClick={() => (aiActive ? onExitAiMode?.() : onAiSearch())}
+                      aria-label={aiActive ? "Exit AI search" : "Search with AI"}
+                      aria-pressed={aiActive}
+                      className={aiActive ? "text-primary" : undefined}
+                    />
+                  }
+                >
+                  <SparklesIcon className="size-4" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  {aiActive ? "AI search is on — click to turn off" : "Search with AI"}
+                </TooltipContent>
+              </Tooltip>
+            </InputGroupAddon>
+          ) : null}
+        </InputGroup>
       </div>
 
       {/* Below sm: 2-column grid. At sm+, `contents` drops the grid so these

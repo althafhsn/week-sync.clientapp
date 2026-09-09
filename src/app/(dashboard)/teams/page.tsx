@@ -66,6 +66,10 @@ export default function TeamsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState("12");
   const [users, setUsers] = useState<User[]>([]);
+  // Every team's membership, independent of `teams`' pagination — the editor
+  // needs the full picture to know which users already belong to some other
+  // team, not just the ones on the current page.
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<TeamDraft | null>(null);
@@ -101,10 +105,11 @@ export default function TeamsPage() {
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    Promise.all([loadTeams(page, pageSize), listUsers()])
-      .then(([, userList]) => {
+    Promise.all([loadTeams(page, pageSize), listUsers(), listTeams(INCLUDE)])
+      .then(([, userList, allTeamsList]) => {
         if (cancelled) return;
         setUsers(userList);
+        setAllTeams(allTeamsList);
       })
       .catch((error) => toast.error(errorMessage(error, "Failed to load teams.")))
       .finally(() => {
@@ -131,7 +136,7 @@ export default function TeamsPage() {
       } else {
         await createTeam(payload, INCLUDE);
       }
-      await loadTeams(page, pageSize);
+      await Promise.all([loadTeams(page, pageSize), listTeams(INCLUDE).then(setAllTeams)]);
       setDraft(null);
     } catch (error) {
       toast.error(errorMessage(error, "Failed to save team."));
@@ -150,6 +155,7 @@ export default function TeamsPage() {
       } else {
         await loadTeams(targetPage, pageSize);
       }
+      await listTeams(INCLUDE).then(setAllTeams);
     } catch (error) {
       toast.error(errorMessage(error, "Failed to delete team."));
     }
@@ -173,6 +179,7 @@ export default function TeamsPage() {
         <TeamEditorCard
           draft={draft}
           users={users}
+          allTeams={allTeams}
           saving={saving}
           onChange={setDraft}
           onCancel={() => setDraft(null)}
@@ -227,6 +234,7 @@ export default function TeamsPage() {
           pageSize={pageSize}
           pageSizeOptions={["5", "10", "12", "25", "50", "all"]}
           onPageSizeChange={setPageSize}
+          total={total}
         />
       ) : null}
     </div>

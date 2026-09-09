@@ -276,6 +276,7 @@ export default function ProjectsPage() {
           pageSize={pageSize}
           pageSizeOptions={["5", "6", "10", "25", "50", "all"]}
           onPageSizeChange={setPageSize}
+          total={total}
         />
       ) : null}
     </div>

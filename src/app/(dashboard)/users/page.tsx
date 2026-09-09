@@ -374,6 +374,7 @@ export default function UsersPage() {
           pageSize={pageSize}
           pageSizeOptions={["5", "9", "10", "25", "50", "all"]}
           onPageSizeChange={setPageSize}
+          total={total}
         />
       ) : null}
     </div>

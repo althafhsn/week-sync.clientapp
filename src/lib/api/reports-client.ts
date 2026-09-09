@@ -30,6 +30,11 @@ export const REPORT_INCLUDE = [
 // counts and totals computed from them.
 export const REPORT_LIST_INCLUDE = ["reportStatus", "tasks", "reportHours"];
 
+// Adds the relations needed to text-match a report against its owner/project
+// name, for the plain (non-AI) live search box - not part of the default
+// list include since most callers only need the ids already on the report.
+export const REPORT_LIST_INCLUDE_SEARCHABLE = [...REPORT_LIST_INCLUDE, "user", "project"];
+
 export interface ListReportsFilters {
   userId?: string;
   projectId?: string;
@@ -78,6 +83,22 @@ export async function listReportsPage(
     () => fetchPage<Report>(path, page, pageSize),
     ENTITY_TTL_MS
   );
+}
+
+/** Ranks reports by semantic similarity to `query` (owner/project/status names,
+ * dates, etc.) instead of createdAt — a drop-in for listReportsPage when the
+ * user is searching rather than browsing. Not cached: search results depend
+ * on free-text input that changes on every keystroke. */
+export async function searchReportsPage(
+  query: string,
+  page: number,
+  pageSize: number,
+  include: string[] = REPORT_LIST_INCLUDE
+): Promise<PaginatedResult<Report>> {
+  const params = new URLSearchParams({ q: query });
+  if (include.length) params.set("include", include.join(","));
+  const path = `${CACHE_PREFIX}/search?${params.toString()}`;
+  return fetchPage<Report>(path, page, pageSize);
 }
 
 export async function getReport(

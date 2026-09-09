@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import type { User } from "@/lib/api/types";
+import type { Team, User } from "@/lib/api/types";
 
 export interface TeamDraft {
   id: string | null;
@@ -36,6 +36,7 @@ export interface TeamDraft {
 export function TeamEditorCard({
   draft,
   users,
+  allTeams,
   saving,
   onChange,
   onCancel,
@@ -43,6 +44,9 @@ export function TeamEditorCard({
 }: {
   draft: TeamDraft;
   users: User[];
+  /** Every team's current membership, used to keep a user from being picked
+   * for more than one team at a time. */
+  allTeams: Team[];
   saving: boolean;
   onChange: (draft: TeamDraft) => void;
   onCancel: () => void;
@@ -58,6 +62,17 @@ export function TeamEditorCard({
   }
 
   const selectedMembers = users.filter((u) => draft.memberIds.includes(u.id));
+
+  // A user already on some other team can't be picked for this one - map
+  // them to the name of the team they're already in, excluding this draft's
+  // own team so its current members stay selectable.
+  const otherTeamByUserId = new Map<string, string>();
+  for (const team of allTeams) {
+    if (team.id === draft.id) continue;
+    for (const member of team.teamMembers ?? []) {
+      otherTeamByUserId.set(member.userId, team.name);
+    }
+  }
 
   return (
     <Card>
@@ -155,18 +170,25 @@ export function TeamEditorCard({
               <CommandGroup>
                 {users.map((user) => {
                   const selected = draft.memberIds.includes(user.id);
+                  const otherTeam = otherTeamByUserId.get(user.id);
                   return (
                     <CommandItem
                       key={user.id}
                       value={`${user.name} ${user.email}`}
                       onSelect={() => toggleMember(user.id)}
                       data-checked={selected}
+                      disabled={!!otherTeam}
                     >
                       <span className="flex-1">
                         {user.name}
                         <span className="text-muted-foreground ml-1.5 text-xs">
                           {user.email}
                         </span>
+                        {otherTeam ? (
+                          <span className="text-muted-foreground ml-1.5 text-xs italic">
+                            Already in {otherTeam}
+                          </span>
+                        ) : null}
                       </span>
                     </CommandItem>
                   );
