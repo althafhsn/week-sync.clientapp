@@ -124,7 +124,7 @@ export default function ProjectsPage() {
       loadProjects(page, pageSize),
       listUsers(),
       listProjectStatuses(),
-      listTeams(),
+      listTeams(["members"]),
     ])
       .then(([, userList, statusList, teamList]) => {
         if (cancelled) return;
@@ -224,7 +224,14 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {projects.map((project) => {
-            const memberCount = project.userProjects?.length ?? 0;
+            const directMemberIds = (project.userProjects ?? []).map((up) => up.userId);
+            const assignedTeamIds = new Set(
+              (project.teamProjects ?? []).map((tp) => tp.teamId)
+            );
+            const teamMemberIds = teams
+              .filter((t) => assignedTeamIds.has(t.id))
+              .flatMap((t) => (t.teamMembers ?? []).map((tm) => tm.userId));
+            const memberCount = new Set([...directMemberIds, ...teamMemberIds]).size;
             return (
               <Card key={project.id}>
                 <CardContent className="space-y-2">
