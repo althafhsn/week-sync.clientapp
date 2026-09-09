@@ -1,26 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { CheckCircle2, CircleSlash, UserPlus, Users2 } from "lucide-react";
 
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { EntityPickerField } from "@/components/admin/EntityPickerField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -62,9 +46,6 @@ export function ProjectEditorCard({
   onCancel: () => void;
   onSave: () => void;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [teamPickerOpen, setTeamPickerOpen] = useState(false);
-
   function toggleMember(id: string) {
     const memberIds = draft.memberIds.includes(id)
       ? draft.memberIds.filter((m) => m !== id)
@@ -79,8 +60,6 @@ export function ProjectEditorCard({
     onChange({ ...draft, teamIds });
   }
 
-  const selectedMembers = users.filter((u) => draft.memberIds.includes(u.id));
-  const selectedTeams = teams.filter((t) => draft.teamIds.includes(t.id));
   const activeStatusName = statuses.find(
     (s) => s.id === draft.projectStatusId
   )?.name;
@@ -145,77 +124,42 @@ export function ProjectEditorCard({
           )}
         </div>
 
-        <div className="space-y-1.5">
-          <Label>Assigned team members</Label>
-          <p className="text-muted-foreground text-sm">
-            Search and select the members allowed to create reports for this
-            project.
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-full border border-input px-3 py-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              {selectedMembers.length === 0 ? (
-                <span className="text-muted-foreground px-1 text-sm">
-                  No members assigned
-                </span>
-              ) : (
-                selectedMembers.map((m) => (
-                  <span
-                    key={m.id}
-                    className="bg-secondary text-secondary-foreground inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium"
-                  >
-                    {m.name}
-                  </span>
-                ))
-              )}
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="shrink-0 rounded-full"
-              onClick={() => setPickerOpen(true)}
-            >
-              <UserPlus className="size-4" />
-              Manage members
-            </Button>
-          </div>
-        </div>
+        <EntityPickerField
+          label="Assigned team members"
+          description="Search and select the members allowed to create reports for this project."
+          items={users}
+          selectedIds={draft.memberIds}
+          getId={(u) => u.id}
+          getLabel={(u) => u.name}
+          getSecondaryLabel={(u) => u.email}
+          getSearchValue={(u) => `${u.name} ${u.email}`}
+          onToggle={toggleMember}
+          emptyChipsText="No members assigned"
+          manageButtonLabel="Manage members"
+          manageButtonIcon={<UserPlus className="size-4" />}
+          dialogTitle="Assign team members"
+          dialogDescription="Search the directory and select everyone who can submit reports for this project."
+          searchPlaceholder="Search by name or email…"
+          emptyResultsText="No members found."
+        />
 
-        <div className="space-y-1.5">
-          <Label>Assigned teams</Label>
-          <p className="text-muted-foreground text-sm">
-            Everyone on an assigned team can create reports for this project,
-            in addition to the individually assigned members above.
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-full border border-input px-3 py-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              {selectedTeams.length === 0 ? (
-                <span className="text-muted-foreground px-1 text-sm">
-                  No teams assigned
-                </span>
-              ) : (
-                selectedTeams.map((t) => (
-                  <span
-                    key={t.id}
-                    className="bg-secondary text-secondary-foreground inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium"
-                  >
-                    {t.name}
-                  </span>
-                ))
-              )}
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="shrink-0 rounded-full"
-              onClick={() => setTeamPickerOpen(true)}
-            >
-              <Users2 className="size-4" />
-              Manage teams
-            </Button>
-          </div>
-        </div>
+        <EntityPickerField
+          label="Assigned teams"
+          description="Everyone on an assigned team can create reports for this project, in addition to the individually assigned members above."
+          items={teams}
+          selectedIds={draft.teamIds}
+          getId={(t) => t.id}
+          getLabel={(t) => t.name}
+          getSearchValue={(t) => t.name}
+          onToggle={toggleTeam}
+          emptyChipsText="No teams assigned"
+          manageButtonLabel="Manage teams"
+          manageButtonIcon={<Users2 className="size-4" />}
+          dialogTitle="Assign teams"
+          dialogDescription="Every member of a selected team will be able to submit reports for this project."
+          searchPlaceholder="Search by team name…"
+          emptyResultsText="No teams found."
+        />
 
         <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button
@@ -232,87 +176,6 @@ export function ProjectEditorCard({
           </Button>
         </div>
       </CardContent>
-
-      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Assign team members</DialogTitle>
-            <DialogDescription>
-              Search the directory and select everyone who can submit reports
-              for this project.
-            </DialogDescription>
-          </DialogHeader>
-          <Command className="h-72 rounded-lg border border-border">
-            <CommandInput placeholder="Search by name or email…" />
-            <CommandList>
-              <CommandEmpty>No members found.</CommandEmpty>
-              <CommandGroup>
-                {users.map((user) => {
-                  const selected = draft.memberIds.includes(user.id);
-                  return (
-                    <CommandItem
-                      key={user.id}
-                      value={`${user.name} ${user.email}`}
-                      onSelect={() => toggleMember(user.id)}
-                      data-checked={selected}
-                    >
-                      <span className="flex-1">
-                        {user.name}
-                        <span className="text-muted-foreground ml-1.5 text-xs">
-                          {user.email}
-                        </span>
-                      </span>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-          <DialogFooter>
-            <Button type="button" onClick={() => setPickerOpen(false)}>
-              Done — {selectedMembers.length} selected
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={teamPickerOpen} onOpenChange={setTeamPickerOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Assign teams</DialogTitle>
-            <DialogDescription>
-              Every member of a selected team will be able to submit reports
-              for this project.
-            </DialogDescription>
-          </DialogHeader>
-          <Command className="h-72 rounded-lg border border-border">
-            <CommandInput placeholder="Search by team name…" />
-            <CommandList>
-              <CommandEmpty>No teams found.</CommandEmpty>
-              <CommandGroup>
-                {teams.map((team) => {
-                  const selected = draft.teamIds.includes(team.id);
-                  return (
-                    <CommandItem
-                      key={team.id}
-                      value={team.name}
-                      onSelect={() => toggleTeam(team.id)}
-                      data-checked={selected}
-                    >
-                      <span className="flex-1">{team.name}</span>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-          <DialogFooter>
-            <Button type="button" onClick={() => setTeamPickerOpen(false)}>
-              Done — {selectedTeams.length} selected
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }

@@ -11,10 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getUser, updateUser } from "@/lib/api/users-client";
 import { useStore } from "@/lib/store";
-
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
+import { getErrorMessage } from "@/lib/utils";
 
 export default function SettingsPage() {
   const { currentUser, updateProfile } = useStore();
@@ -44,7 +41,7 @@ export default function SettingsPage() {
         setTeamName(user.teamMembers?.[0]?.team?.name ?? null);
       })
       .catch((error) =>
-        toast.error(errorMessage(error, "Failed to load your profile."))
+        toast.error(getErrorMessage(error, "Failed to load your profile."))
       )
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -68,7 +65,7 @@ export default function SettingsPage() {
       updateProfile({ name: saved.name, title: saved.jobTitle ?? "" });
       toast.success("Profile updated.");
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to update your profile."));
+      toast.error(getErrorMessage(error, "Failed to update your profile."));
     } finally {
       setSaving(false);
     }

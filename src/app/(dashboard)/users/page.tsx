@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,6 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateTempPassword } from "@/lib/password";
+import { getErrorMessage } from "@/lib/utils";
+import { usePaginatedCrud } from "@/lib/use-paginated-crud";
 import { listRoles } from "@/lib/api/roles-client";
 import { listUserStatuses } from "@/lib/api/user-statuses-client";
 import { listTeams } from "@/lib/api/teams-client";
@@ -67,10 +69,6 @@ function membershipIdFor(teams: Team[], userId: string): string | null {
   return null;
 }
 
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
 function UserCardSkeleton() {
   return (
     <Card>
@@ -88,14 +86,26 @@ function UserCardSkeleton() {
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState("9");
+  const {
+    items: users,
+    total,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    loading,
+    setLoading,
+    pageCount,
+    load: loadUsers,
+    stepBackIfLastRow,
+  } = usePaginatedCrud<User>({
+    initialPageSize: "9",
+    loadPage: (pageToLoad, size) => listUsersPage(pageToLoad, size, INCLUDE),
+    loadAll: () => listUsers(INCLUDE),
+  });
   const [roles, setRoles] = useState<Role[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [userStatuses, setUserStatuses] = useState<UserStatus[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<UserDraft | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
@@ -105,31 +115,8 @@ export default function UsersPage() {
     description: "Invite team members and managers, and assign roles.",
   });
 
-  const pageCount =
-    pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / Number(pageSize)));
-
-  const loadUsers = useCallback((pageToLoad: number, size: string) => {
-    if (size === "all") {
-      return listUsers(INCLUDE).then((data) => {
-        setUsers(data);
-        setTotal(data.length);
-      });
-    }
-    return listUsersPage(pageToLoad, Number(size), INCLUDE).then((result) => {
-      setUsers(result.data);
-      setTotal(result.count);
-    });
-  }, []);
-
-  // Any page-size change invalidates the current page number.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPage(1);
-  }, [pageSize]);
-
   useEffect(() => {
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([
       loadUsers(page, pageSize),
@@ -143,14 +130,14 @@ export default function UsersPage() {
         setUserStatuses(statusList);
         setTeams(teamList);
       })
-      .catch((error) => toast.error(errorMessage(error, "Failed to load users.")))
+      .catch((error) => toast.error(getErrorMessage(error, "Failed to load users.")))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, loadUsers]);
+  }, [page, pageSize, loadUsers, setLoading]);
 
   async function handleSave() {
     if (
@@ -218,7 +205,7 @@ export default function UsersPage() {
       await loadUsers(page, pageSize);
       setDraft(null);
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to save user."));
+      toast.error(getErrorMessage(error, "Failed to save user."));
     } finally {
       setSaving(false);
     }
@@ -227,15 +214,9 @@ export default function UsersPage() {
   async function handleDelete(id: string) {
     try {
       await deleteUser(id);
-      const targetPage =
-        pageSize !== "all" && users.length === 1 && page > 1 ? page - 1 : page;
-      if (targetPage !== page) {
-        setPage(targetPage);
-      } else {
-        await loadUsers(targetPage, pageSize);
-      }
+      await stepBackIfLastRow();
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to delete user."));
+      toast.error(getErrorMessage(error, "Failed to delete user."));
     }
   }
 
@@ -253,7 +234,7 @@ export default function UsersPage() {
         statusName === "Approved" ? "User approved." : "Signup request rejected."
       );
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to update approval status."));
+      toast.error(getErrorMessage(error, "Failed to update approval status."));
     } finally {
       setDecidingId(null);
     }

@@ -1,11 +1,3 @@
-import { NextRequest } from "next/server";
+import { proxyGet } from "@/lib/api/relay";
 
-import { backendFetch } from "@/lib/api/backend-fetch";
-import { relayJson } from "@/lib/api/relay";
-
-export async function GET(request: NextRequest) {
-  const upstream = await backendFetch(
-    `/project-statuses${request.nextUrl.search}`
-  );
-  return relayJson(upstream);
-}
+export const GET = proxyGet("/project-statuses");

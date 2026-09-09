@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +22,8 @@ import {
   listProjectsPage,
   updateProject,
 } from "@/lib/api/projects-client";
+import { getErrorMessage } from "@/lib/utils";
+import { usePaginatedCrud } from "@/lib/use-paginated-crud";
 import { listProjectStatuses } from "@/lib/api/project-statuses-client";
 import { listUsers } from "@/lib/api/users-client";
 import { listTeams } from "@/lib/api/teams-client";
@@ -53,10 +55,6 @@ function draftFromProject(project: Project): ProjectDraft {
   };
 }
 
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
 function ProjectCardSkeleton() {
   return (
     <Card>
@@ -78,14 +76,26 @@ function ProjectCardSkeleton() {
 }
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState("6");
+  const {
+    items: projects,
+    total,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    loading,
+    setLoading,
+    pageCount,
+    load: loadProjects,
+    stepBackIfLastRow,
+  } = usePaginatedCrud<Project>({
+    initialPageSize: "6",
+    loadPage: (pageToLoad, size) => listProjectsPage(pageToLoad, size, INCLUDE),
+    loadAll: () => listProjects(INCLUDE),
+  });
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [statuses, setStatuses] = useState<ProjectStatus[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<ProjectDraft | null>(null);
 
@@ -94,31 +104,8 @@ export default function ProjectsPage() {
     description: "Manage the projects and categories teams report against.",
   });
 
-  const pageCount =
-    pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / Number(pageSize)));
-
-  const loadProjects = useCallback((pageToLoad: number, size: string) => {
-    if (size === "all") {
-      return listProjects(INCLUDE).then((data) => {
-        setProjects(data);
-        setTotal(data.length);
-      });
-    }
-    return listProjectsPage(pageToLoad, Number(size), INCLUDE).then((result) => {
-      setProjects(result.data);
-      setTotal(result.count);
-    });
-  }, []);
-
-  // Any page-size change invalidates the current page number.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPage(1);
-  }, [pageSize]);
-
   useEffect(() => {
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([
       loadProjects(page, pageSize),
@@ -133,7 +120,7 @@ export default function ProjectsPage() {
         setTeams(teamList);
       })
       .catch((error) =>
-        toast.error(errorMessage(error, "Failed to load projects."))
+        toast.error(getErrorMessage(error, "Failed to load projects."))
       )
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -141,7 +128,7 @@ export default function ProjectsPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, loadProjects]);
+  }, [page, pageSize, loadProjects, setLoading]);
 
   async function handleSave() {
     if (!draft || !draft.name.trim() || draft.projectStatusId == null || saving) {
@@ -165,7 +152,7 @@ export default function ProjectsPage() {
       await loadProjects(page, pageSize);
       setDraft(null);
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to save project."));
+      toast.error(getErrorMessage(error, "Failed to save project."));
     } finally {
       setSaving(false);
     }
@@ -174,17 +161,9 @@ export default function ProjectsPage() {
   async function handleDelete(id: string) {
     try {
       await deleteProject(id);
-      // Dropping the last row on a page beyond the first steps back a page
-      // instead of leaving the view stranded on now-empty results.
-      const targetPage =
-        pageSize !== "all" && projects.length === 1 && page > 1 ? page - 1 : page;
-      if (targetPage !== page) {
-        setPage(targetPage);
-      } else {
-        await loadProjects(targetPage, pageSize);
-      }
+      await stepBackIfLastRow();
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to delete project."));
+      toast.error(getErrorMessage(error, "Failed to delete project."));
     }
   }
 

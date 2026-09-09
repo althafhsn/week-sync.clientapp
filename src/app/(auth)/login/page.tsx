@@ -6,13 +6,13 @@ import { toast } from "sonner";
 import { Clock3 } from "lucide-react";
 
 import { destinationFor } from "@/components/auth/AuthGate";
-import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useStore } from "@/lib/store";
+import { getErrorMessage } from "@/lib/utils";
 import { loginWithApi } from "@/lib/api/auth-client";
 import { apiUserToUser } from "@/lib/api/mappers";
 import type { Role } from "@/lib/types";
@@ -56,10 +56,10 @@ export default function LoginPage() {
         user.mustChangePassword ? "/change-password" : destinationFor(role)
       );
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Those credentials don't match an account.";
+      const message = getErrorMessage(
+        error,
+        "Those credentials don't match an account."
+      );
       if (message.toLowerCase().includes(PENDING_APPROVAL_HINT)) {
         setPendingApproval(true);
       } else {
@@ -71,91 +71,81 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-svh lg:grid-cols-[1.05fr_1fr]">
-      <AuthShowcasePanel />
-
-      <div className="relative flex min-h-svh items-center justify-center px-5 py-10 sm:px-8">
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-          <ThemeToggle />
+    <AuthLayout>
+      {pendingApproval ? (
+        <div className="space-y-4 text-center">
+          <Clock3 className="text-warning mx-auto size-10" />
+          <div className="space-y-1.5">
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              Awaiting approval
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Your account request has been submitted and is waiting on a
+              manager to approve it. You&apos;ll be able to sign in as
+              soon as it&apos;s approved.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10"
+            onClick={() => setPendingApproval(false)}
+          >
+            Back to sign in
+          </Button>
         </div>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              Sign in to Week Sync
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Welcome back. Enter your details to continue.
+            </p>
+          </div>
 
-        <div className="w-full max-w-sm space-y-8">
-          {pendingApproval ? (
-            <div className="space-y-4 text-center">
-              <Clock3 className="text-warning mx-auto size-10" />
-              <div className="space-y-1.5">
-                <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                  Awaiting approval
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  Your account request has been submitted and is waiting on a
-                  manager to approve it. You&apos;ll be able to sign in as
-                  soon as it&apos;s approved.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10"
-                onClick={() => setPendingApproval(false)}
-              >
-                Back to sign in
-              </Button>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Work email</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@company.com"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="h-11"
+              />
             </div>
-          ) : (
-            <>
-              <div className="space-y-1.5">
-                <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                  Sign in to Week Sync
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  Welcome back. Enter your details to continue.
-                </p>
-              </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">Work email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@company.com"
-                    required
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    className="h-11"
-                  />
-                </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <PasswordInput
+                id="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="h-11"
+              />
+            </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="password">Password</Label>
-                  <PasswordInput
-                    id="password"
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    required
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="h-11"
-                  />
-                </div>
+            <Button type="submit" className="h-11 w-full" disabled={submitting}>
+              {submitting ? "Signing in…" : "Sign in"}
+            </Button>
+          </form>
 
-                <Button type="submit" className="h-11 w-full" disabled={submitting}>
-                  {submitting ? "Signing in…" : "Sign in"}
-                </Button>
-              </form>
-
-              <p className="text-muted-foreground text-center text-sm">
-                New here?{" "}
-                <a href="/signup" className="text-foreground font-medium underline underline-offset-4">
-                  Create an account
-                </a>
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+          <p className="text-muted-foreground text-center text-sm">
+            New here?{" "}
+            <a href="/signup" className="text-foreground font-medium underline underline-offset-4">
+              Create an account
+            </a>
+          </p>
+        </>
+      )}
+    </AuthLayout>
   );
 }

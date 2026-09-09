@@ -21,16 +21,12 @@ import {
 } from "@/components/ui/card";
 import { weekLabel } from "@/lib/demo-data";
 import { useLookups, useStore } from "@/lib/store";
-import { initialsOf } from "@/lib/utils";
+import { getErrorMessage, initialsOf } from "@/lib/utils";
 import { listUsers, updateUser } from "@/lib/api/users-client";
 import { listUserStatuses } from "@/lib/api/user-statuses-client";
 import type { User as ApiUser, UserStatus } from "@/lib/api/types";
 
 const PENDING_APPROVAL = "Pending Approval";
-
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
 
 function toDateKey(d: Date): string {
   const y = d.getFullYear();
@@ -71,7 +67,7 @@ export default function TeamDashboardPage() {
         setUserStatuses(statusList);
       })
       .catch((error) =>
-        toast.error(errorMessage(error, "Failed to load pending approvals."))
+        toast.error(getErrorMessage(error, "Failed to load pending approvals."))
       );
     return () => {
       cancelled = true;
@@ -92,7 +88,7 @@ export default function TeamDashboardPage() {
         statusName === "Approved" ? "User approved." : "Signup request rejected."
       );
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to update approval status."));
+      toast.error(getErrorMessage(error, "Failed to update approval status."));
     } finally {
       setDecidingId(null);
     }

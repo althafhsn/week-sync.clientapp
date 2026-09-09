@@ -12,26 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-
-function parseLocalDate(iso: string): Date | undefined {
-  if (!iso) return undefined;
-  const [year, month, day] = iso.split("-").map(Number);
-  if (!year || !month || !day) return undefined;
-  return new Date(year, month - 1, day);
-}
-
-function toIsoDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function formatLabel(date: Date, withYear: boolean) {
-  const month = date.toLocaleString("en-US", { month: "short" });
-  const day = String(date.getDate()).padStart(2, "0");
-  return withYear ? `${month}-${day}-${date.getFullYear()}` : `${month}-${day}`;
-}
+import { formatDateLabel, parseLocalDate, toIsoDate } from "@/lib/date";
 
 export function DateRangeField({
   startValue,
@@ -58,8 +39,8 @@ export function DateRangeField({
 
   const label = from
     ? to
-      ? `${formatLabel(from, from.getFullYear() !== to.getFullYear())} to ${formatLabel(to, true)}`
-      : `${formatLabel(from, true)} to …`
+      ? `${formatDateLabel(from, from.getFullYear() !== to.getFullYear())} to ${formatDateLabel(to, true)}`
+      : `${formatDateLabel(from, true)} to …`
     : "Select date range";
 
   function handleOpenChange(next: boolean) {

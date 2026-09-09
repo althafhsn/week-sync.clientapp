@@ -1,26 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { UserPlus } from "lucide-react";
 
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { EntityPickerField } from "@/components/admin/EntityPickerField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -52,16 +36,12 @@ export function TeamEditorCard({
   onCancel: () => void;
   onSave: () => void;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-
   function toggleMember(id: string) {
     const memberIds = draft.memberIds.includes(id)
       ? draft.memberIds.filter((m) => m !== id)
       : [...draft.memberIds, id];
     onChange({ ...draft, memberIds });
   }
-
-  const selectedMembers = users.filter((u) => draft.memberIds.includes(u.id));
 
   // A user already on some other team can't be picked for this one - map
   // them to the name of the team they're already in, excluding this draft's
@@ -102,41 +82,28 @@ export function TeamEditorCard({
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label>Members</Label>
-          <p className="text-muted-foreground text-sm">
-            Anyone on this team automatically gets access to every project
-            assigned to the team.
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-full border border-input px-3 py-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              {selectedMembers.length === 0 ? (
-                <span className="text-muted-foreground px-1 text-sm">
-                  No members assigned
-                </span>
-              ) : (
-                selectedMembers.map((m) => (
-                  <span
-                    key={m.id}
-                    className="bg-secondary text-secondary-foreground inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium"
-                  >
-                    {m.name}
-                  </span>
-                ))
-              )}
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="shrink-0 rounded-full"
-              onClick={() => setPickerOpen(true)}
-            >
-              <UserPlus className="size-4" />
-              Manage members
-            </Button>
-          </div>
-        </div>
+        <EntityPickerField
+          label="Members"
+          description="Anyone on this team automatically gets access to every project assigned to the team."
+          items={users}
+          selectedIds={draft.memberIds}
+          getId={(u) => u.id}
+          getLabel={(u) => u.name}
+          getSecondaryLabel={(u) => u.email}
+          getSearchValue={(u) => `${u.name} ${u.email}`}
+          getDisabledReason={(u) => {
+            const otherTeam = otherTeamByUserId.get(u.id);
+            return otherTeam ? `Already in ${otherTeam}` : undefined;
+          }}
+          onToggle={toggleMember}
+          emptyChipsText="No members assigned"
+          manageButtonLabel="Manage members"
+          manageButtonIcon={<UserPlus className="size-4" />}
+          dialogTitle="Assign members"
+          dialogDescription="Search the directory and select everyone who belongs to this team."
+          searchPlaceholder="Search by name or email…"
+          emptyResultsText="No members found."
+        />
 
         <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button
@@ -153,56 +120,6 @@ export function TeamEditorCard({
           </Button>
         </div>
       </CardContent>
-
-      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Assign members</DialogTitle>
-            <DialogDescription>
-              Search the directory and select everyone who belongs to this
-              team.
-            </DialogDescription>
-          </DialogHeader>
-          <Command className="h-72 rounded-lg border border-border">
-            <CommandInput placeholder="Search by name or email…" />
-            <CommandList>
-              <CommandEmpty>No members found.</CommandEmpty>
-              <CommandGroup>
-                {users.map((user) => {
-                  const selected = draft.memberIds.includes(user.id);
-                  const otherTeam = otherTeamByUserId.get(user.id);
-                  return (
-                    <CommandItem
-                      key={user.id}
-                      value={`${user.name} ${user.email}`}
-                      onSelect={() => toggleMember(user.id)}
-                      data-checked={selected}
-                      disabled={!!otherTeam}
-                    >
-                      <span className="flex-1">
-                        {user.name}
-                        <span className="text-muted-foreground ml-1.5 text-xs">
-                          {user.email}
-                        </span>
-                        {otherTeam ? (
-                          <span className="text-muted-foreground ml-1.5 text-xs italic">
-                            Already in {otherTeam}
-                          </span>
-                        ) : null}
-                      </span>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-          <DialogFooter>
-            <Button type="button" onClick={() => setPickerOpen(false)}>
-              Done — {selectedMembers.length} selected
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }

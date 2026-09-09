@@ -1,11 +1,4 @@
-import { fetchAllPages } from "@/lib/api/pagination-fetch";
-import { cached, LOOKUP_TTL_MS } from "@/lib/api/request-cache";
+import { makeLookupClient } from "@/lib/api/lookup-client-factory";
 import type { PriorityType } from "@/lib/api/types";
 
-export async function listPriorityTypes(): Promise<PriorityType[]> {
-  return cached(
-    "/api/priority-types",
-    () => fetchAllPages<PriorityType>("/api/priority-types"),
-    LOOKUP_TTL_MS
-  );
-}
+export const listPriorityTypes = makeLookupClient<PriorityType>("/api/priority-types");

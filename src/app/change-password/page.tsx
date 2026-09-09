@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { destinationFor } from "@/components/auth/AuthGate";
-import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { changePasswordWithApi } from "@/lib/api/auth-client";
 import { useStore } from "@/lib/store";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -55,9 +55,7 @@ export default function ChangePasswordPage() {
       toast.success("Password updated.");
       router.push(destinationFor(role));
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not change your password."
-      );
+      toast.error(getErrorMessage(error, "Could not change your password."));
     } finally {
       setSubmitting(false);
     }
@@ -72,83 +70,73 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <div className="grid min-h-svh lg:grid-cols-[1.05fr_1fr]">
-      <AuthShowcasePanel />
-
-      <div className="relative flex min-h-svh items-center justify-center px-5 py-10 sm:px-8">
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-          <ThemeToggle />
-        </div>
-
-        <div className="w-full max-w-sm space-y-8">
-          <div className="space-y-1.5">
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-              Set a new password
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              You&apos;re signed in as {currentUser?.name} with a temporary
-              password. Choose a new one to continue to your dashboard.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="currentPassword">Current (temporary) password</Label>
-              <PasswordInput
-                id="currentPassword"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                required
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="newPassword">New password</Label>
-              <PasswordInput
-                id="newPassword"
-                autoComplete="new-password"
-                placeholder="••••••••"
-                required
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword">Confirm new password</Label>
-              <PasswordInput
-                id="confirmPassword"
-                autoComplete="new-password"
-                placeholder="••••••••"
-                required
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                className="h-11"
-              />
-            </div>
-
-            <Button type="submit" className="h-11 w-full" disabled={submitting}>
-              {submitting ? "Updating…" : "Update password & continue"}
-            </Button>
-          </form>
-
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-9 w-full"
-            onClick={() => {
-              signOut();
-              router.push("/login");
-            }}
-          >
-            Sign out instead
-          </Button>
-        </div>
+    <AuthLayout>
+      <div className="space-y-1.5">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+          Set a new password
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          You&apos;re signed in as {currentUser?.name} with a temporary
+          password. Choose a new one to continue to your dashboard.
+        </p>
       </div>
-    </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="currentPassword">Current (temporary) password</Label>
+          <PasswordInput
+            id="currentPassword"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            required
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            className="h-11"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="newPassword">New password</Label>
+          <PasswordInput
+            id="newPassword"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            required
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            className="h-11"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="confirmPassword">Confirm new password</Label>
+          <PasswordInput
+            id="confirmPassword"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            required
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            className="h-11"
+          />
+        </div>
+
+        <Button type="submit" className="h-11 w-full" disabled={submitting}>
+          {submitting ? "Updating…" : "Update password & continue"}
+        </Button>
+      </form>
+
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-9 w-full"
+        onClick={() => {
+          signOut();
+          router.push("/login");
+        }}
+      >
+        Sign out instead
+      </Button>
+    </AuthLayout>
   );
 }

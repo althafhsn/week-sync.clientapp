@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,6 +19,8 @@ import {
   updateTeam,
 } from "@/lib/api/teams-client";
 import { listUsers } from "@/lib/api/users-client";
+import { getErrorMessage } from "@/lib/utils";
+import { usePaginatedCrud } from "@/lib/use-paginated-crud";
 import type { Team, User } from "@/lib/api/types";
 
 const INCLUDE = ["members"];
@@ -41,10 +43,6 @@ function draftFromTeam(team: Team): TeamDraft {
   };
 }
 
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
 function TeamCardSkeleton() {
   return (
     <Card>
@@ -61,16 +59,28 @@ function TeamCardSkeleton() {
 }
 
 export default function TeamsPage() {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState("12");
+  const {
+    items: teams,
+    total,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    loading,
+    setLoading,
+    pageCount,
+    load: loadTeams,
+    stepBackIfLastRow,
+  } = usePaginatedCrud<Team>({
+    initialPageSize: "12",
+    loadPage: (pageToLoad, size) => listTeamsPage(pageToLoad, size, INCLUDE),
+    loadAll: () => listTeams(INCLUDE),
+  });
   const [users, setUsers] = useState<User[]>([]);
   // Every team's membership, independent of `teams`' pagination — the editor
   // needs the full picture to know which users already belong to some other
   // team, not just the ones on the current page.
   const [allTeams, setAllTeams] = useState<Team[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<TeamDraft | null>(null);
 
@@ -79,31 +89,8 @@ export default function TeamsPage() {
     description: "Group users into teams and share project access across them.",
   });
 
-  const pageCount =
-    pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / Number(pageSize)));
-
-  const loadTeams = useCallback((pageToLoad: number, size: string) => {
-    if (size === "all") {
-      return listTeams(INCLUDE).then((data) => {
-        setTeams(data);
-        setTotal(data.length);
-      });
-    }
-    return listTeamsPage(pageToLoad, Number(size), INCLUDE).then((result) => {
-      setTeams(result.data);
-      setTotal(result.count);
-    });
-  }, []);
-
-  // Any page-size change invalidates the current page number.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPage(1);
-  }, [pageSize]);
-
   useEffect(() => {
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([loadTeams(page, pageSize), listUsers(), listTeams(INCLUDE)])
       .then(([, userList, allTeamsList]) => {
@@ -111,14 +98,14 @@ export default function TeamsPage() {
         setUsers(userList);
         setAllTeams(allTeamsList);
       })
-      .catch((error) => toast.error(errorMessage(error, "Failed to load teams.")))
+      .catch((error) => toast.error(getErrorMessage(error, "Failed to load teams.")))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, loadTeams]);
+  }, [page, pageSize, loadTeams, setLoading]);
 
   async function handleSave() {
     if (!draft || !draft.name.trim() || saving) {
@@ -139,7 +126,7 @@ export default function TeamsPage() {
       await Promise.all([loadTeams(page, pageSize), listTeams(INCLUDE).then(setAllTeams)]);
       setDraft(null);
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to save team."));
+      toast.error(getErrorMessage(error, "Failed to save team."));
     } finally {
       setSaving(false);
     }
@@ -148,16 +135,10 @@ export default function TeamsPage() {
   async function handleDelete(id: string) {
     try {
       await deleteTeam(id);
-      const targetPage =
-        pageSize !== "all" && teams.length === 1 && page > 1 ? page - 1 : page;
-      if (targetPage !== page) {
-        setPage(targetPage);
-      } else {
-        await loadTeams(targetPage, pageSize);
-      }
+      await stepBackIfLastRow();
       await listTeams(INCLUDE).then(setAllTeams);
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to delete team."));
+      toast.error(getErrorMessage(error, "Failed to delete team."));
     }
   }
 

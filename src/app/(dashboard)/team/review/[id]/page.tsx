@@ -23,6 +23,7 @@ import { apiReportHistoryEntryToVersion, apiReportToWeeklyReport } from "@/lib/a
 import { findReportStatusId } from "@/lib/api/report-status";
 import { getReport, getReportHistory, updateReport } from "@/lib/api/reports-client";
 import { useLookups, useStore } from "@/lib/store";
+import { getErrorMessage } from "@/lib/utils";
 import type { ReportVersion, WeeklyReport } from "@/lib/types";
 
 const DEFAULT_APPROVAL_COMMENT =
@@ -127,9 +128,7 @@ export default function ReviewReportPage() {
       // manager can still see the comment they just recorded.
       setComment(mapped.feedback[0]?.comment ?? comment.trim() ?? DEFAULT_APPROVAL_COMMENT);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to submit the review."
-      );
+      toast.error(getErrorMessage(error, "Failed to submit the review."));
     } finally {
       setSubmitting(false);
     }

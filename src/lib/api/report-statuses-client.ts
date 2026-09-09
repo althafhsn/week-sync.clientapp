@@ -1,11 +1,4 @@
-import { fetchAllPages } from "@/lib/api/pagination-fetch";
-import { cached, LOOKUP_TTL_MS } from "@/lib/api/request-cache";
+import { makeLookupClient } from "@/lib/api/lookup-client-factory";
 import type { ReportStatus } from "@/lib/api/types";
 
-export async function listReportStatuses(): Promise<ReportStatus[]> {
-  return cached(
-    "/api/report-statuses",
-    () => fetchAllPages<ReportStatus>("/api/report-statuses"),
-    LOOKUP_TTL_MS
-  );
-}
+export const listReportStatuses = makeLookupClient<ReportStatus>("/api/report-statuses");

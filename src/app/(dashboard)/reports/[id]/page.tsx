@@ -22,6 +22,7 @@ import { apiReportHistoryEntryToVersion, apiReportToWeeklyReport } from "@/lib/a
 import { findReportStatusId } from "@/lib/api/report-status";
 import { getReport, getReportHistory, updateReport } from "@/lib/api/reports-client";
 import { useLookups, useStore } from "@/lib/store";
+import { getErrorMessage } from "@/lib/utils";
 import type { ReportVersion, WeeklyReport } from "@/lib/types";
 
 export default function ReportDetailPage() {
@@ -102,9 +103,7 @@ export default function ReportDetailPage() {
       upsertReport(mapped);
       toast.success("Report submitted for review.");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to submit the report."
-      );
+      toast.error(getErrorMessage(error, "Failed to submit the report."));
     } finally {
       setSubmitting(false);
     }

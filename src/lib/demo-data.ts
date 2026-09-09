@@ -1,9 +1,6 @@
+import { parseLocalDate, toIsoDate } from "./date";
+import { randomId } from "./utils";
 import type { WeeklyReport } from "./types";
-
-function parseLocalDate(iso: string) {
-  const [year, month, day] = iso.split("-").map(Number);
-  return new Date(year!, (month ?? 1) - 1, day ?? 1);
-}
 
 const SHORT_DATE = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -20,11 +17,11 @@ const SHORT_DATE_WITH_YEAR = new Intl.DateTimeFormat("en-US", {
  * human label, e.g. "Aug 3 – Aug 7, 2026" or "Aug 30 – Sep 4, 2026".
  */
 export function weekLabel(start: string, end?: string) {
-  const startDate = parseLocalDate(start);
+  const startDate = parseLocalDate(start)!;
   if (!end || end === start) {
     return SHORT_DATE_WITH_YEAR.format(startDate);
   }
-  const endDate = parseLocalDate(end);
+  const endDate = parseLocalDate(end)!;
   const sameYear = startDate.getFullYear() === endDate.getFullYear();
   const startLabel = sameYear
     ? SHORT_DATE.format(startDate)
@@ -49,14 +46,6 @@ const HIGHLIGHT_TYPE = {
   blocker: { reportHighlightTypeId: 3, typeName: "Blocker" },
 };
 
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function toISODate(d: Date) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 /** Last week's Monday through Friday, relative to today. */
 export function lastWeekRange(): { start: string; end: string } {
   const now = new Date();
@@ -66,14 +55,14 @@ export function lastWeekRange(): { start: string; end: string } {
   lastMonday.setDate(thisMonday.getDate() - 7);
   const lastFriday = new Date(lastMonday);
   lastFriday.setDate(lastMonday.getDate() + 4);
-  return { start: toISODate(lastMonday), end: toISODate(lastFriday) };
+  return { start: toIsoDate(lastMonday), end: toIsoDate(lastFriday) };
 }
 
 export function emptyReport(memberId: string, projectId: string): WeeklyReport {
   const now = new Date().toISOString();
   const week = lastWeekRange();
   return {
-    id: `r-${Math.random().toString(36).slice(2, 9)}`,
+    id: randomId("r"),
     memberId,
     projectId,
     weekStart: week.start,
@@ -81,7 +70,7 @@ export function emptyReport(memberId: string, projectId: string): WeeklyReport {
     status: "draft",
     tasks: [
       {
-        id: `t-${Math.random().toString(36).slice(2, 8)}`,
+        id: randomId("t"),
         name: "",
         ...PRIORITY.medium,
         plannedPct: 100,
@@ -93,11 +82,11 @@ export function emptyReport(memberId: string, projectId: string): WeeklyReport {
       },
     ],
     nextWeekTasks: [
-      { id: `nw-${Math.random().toString(36).slice(2, 8)}`, description: "" },
+      { id: randomId("nw"), description: "" },
     ],
     blockers: [
       {
-        id: `blk-${Math.random().toString(36).slice(2, 8)}`,
+        id: randomId("blk"),
         ...HIGHLIGHT_TYPE.blocker,
         description: "",
         isKey: true,
@@ -105,7 +94,7 @@ export function emptyReport(memberId: string, projectId: string): WeeklyReport {
     ],
     achievements: [
       {
-        id: `ach-${Math.random().toString(36).slice(2, 8)}`,
+        id: randomId("ach"),
         ...HIGHLIGHT_TYPE.achievement,
         description: "",
         isKey: true,

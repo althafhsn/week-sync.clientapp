@@ -1,11 +1,4 @@
-import { fetchAllPages } from "@/lib/api/pagination-fetch";
-import { cached, LOOKUP_TTL_MS } from "@/lib/api/request-cache";
+import { makeLookupClient } from "@/lib/api/lookup-client-factory";
 import type { Role } from "@/lib/api/types";
 
-export async function listRoles(): Promise<Role[]> {
-  return cached(
-    "/api/roles",
-    () => fetchAllPages<Role>("/api/roles"),
-    LOOKUP_TTL_MS
-  );
-}
+export const listRoles = makeLookupClient<Role>("/api/roles");

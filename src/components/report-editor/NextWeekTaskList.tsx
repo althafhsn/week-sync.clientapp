@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { randomId } from "@/lib/utils";
 import type { NextWeekTask } from "@/lib/types";
 
 export function NextWeekTaskList({
@@ -24,7 +25,7 @@ export function NextWeekTaskList({
   function addItem() {
     onChange([
       ...items,
-      { id: `nw-${Math.random().toString(36).slice(2, 8)}`, description: "" },
+      { id: randomId("nw"), description: "" },
     ]);
   }
 

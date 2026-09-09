@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { emptyReport } from "@/lib/demo-data";
 import { apiProjectToProject, apiReportToWeeklyReport } from "@/lib/api/mappers";
 import { useStore } from "@/lib/store";
+import { getErrorMessage, randomId } from "@/lib/utils";
 import { listProjects } from "@/lib/api/projects-client";
 import { listPriorityTypes } from "@/lib/api/priority-types-client";
 import { listTaskStatuses } from "@/lib/api/task-statuses-client";
@@ -70,7 +71,7 @@ function makeTask(
   const priority = priorityTypes.find((p) => p.name === "Medium") ?? priorityTypes[0];
   const status = taskStatuses.find((s) => s.name === "In Progress") ?? taskStatuses[0];
   return {
-    id: `t-${Math.random().toString(36).slice(2, 8)}`,
+    id: randomId("t"),
     name: "",
     priorityTypeId: priority?.id ?? 0,
     priorityName: priority?.name ?? "",
@@ -91,7 +92,7 @@ function makeHighlightEntry(
 ): HighlightEntry {
   const type = types[0];
   return {
-    id: `${idPrefix}-${Math.random().toString(36).slice(2, 8)}`,
+    id: randomId(idPrefix),
     reportHighlightTypeId: type?.id ?? 0,
     typeName: type?.name ?? "",
     description: "",
@@ -154,11 +155,7 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
         }
       })
       .catch((error) =>
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to load the report form's data."
-        )
+        toast.error(getErrorMessage(error, "Failed to load the report form's data."))
       )
       .finally(() => {
         if (!cancelled) setLoadingLookups(false);
@@ -296,7 +293,7 @@ export function ReportEditor({ existing }: { existing?: WeeklyReport }) {
       upsertReport(mapped);
       return mapped;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save the report.");
+      toast.error(getErrorMessage(error, "Failed to save the report."));
       return null;
     } finally {
       setSubmitting(false);
