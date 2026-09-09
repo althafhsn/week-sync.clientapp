@@ -270,7 +270,7 @@ export default function TeamDashboardPage() {
                 placeholder="Search members…"
               />
             </InputGroup>
-            <div className="max-h-44 space-y-0.5 overflow-y-auto">
+            <div className="max-h-36 space-y-0.5 overflow-y-auto">
             {visibleTeamStatus.length === 0 ? (
               <p className="text-muted-foreground py-2 text-center text-sm">
                 No members match &quot;{memberSearch}&quot;.
